@@ -36,12 +36,20 @@ extern "C" {
 
 typedef uintptr_t KSThread;
 
+/** Convert thread state code to a state string.
+ *
+ * @param state The thread state code.
+ *
+ * @return thread state name.
+ */
+const char *ksthread_state_name(int state);
+
 /** Get a thread's name. Internally, a thread name will
  * never be more than 64 characters long.
  *
  * @param thread The thread whose name to get.
  *
- * @oaram buffer Buffer to hold the name.
+ * @param buffer Buffer to hold the name.
  *
  * @param bufLength The length of the buffer.
  *
@@ -49,12 +57,22 @@ typedef uintptr_t KSThread;
  */
 bool ksthread_getThreadName(const KSThread thread, char *const buffer, int bufLength);
 
+/** Get a thread's state.
+ *
+ * @param thread The thread whose state to get.
+ *
+ * @param threadState Pointer to the threadState value.
+ *
+ * @return true if state was found.
+ */
+bool ksthread_getThreadState(const KSThread thread, int* threadState);
+
 /** Get the name of a thread's dispatch queue. Internally, a queue name will
  * never be more than 64 characters long.
  *
  * @param thread The thread whose queue name to get.
  *
- * @oaram buffer Buffer to hold the name.
+ * @param buffer Buffer to hold the name.
  *
  * @param bufLength The length of the buffer.
  *
