@@ -1113,7 +1113,7 @@ static void writeAllThreads(const KSCrashReportWriter *const writer, const char 
             int threadRunState = 0;
             ksthread_getThreadState(thread, &threadRunState);
             if (thread == offendingThread) {
-                writeThread(writer, NULL, crash, context, i,  writeNotableAddresses, threadRunState);
+                writeThread(writer, NULL, crash, context, i, writeNotableAddresses, threadRunState);
             } else {
                 ksmc_getContextForThread(thread, machineContext, false);
                 writeThread(writer, NULL, crash, machineContext, i, writeNotableAddresses, threadRunState);

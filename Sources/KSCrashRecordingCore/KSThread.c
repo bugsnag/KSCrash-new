@@ -57,7 +57,6 @@ const char *ksthread_state_name(int state) {
     return thread_state_names[state];
 }
 
-
 KSThread ksthread_self(void)
 {
     thread_t thread_self = mach_thread_self();
