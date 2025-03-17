@@ -34,6 +34,10 @@
 extern "C" {
 #endif
 
+/** Default value for the thread state
+ */
+#define TH_STATE_UNSET 0
+
 typedef uintptr_t KSThread;
 
 /** Convert thread state code to a state string.
@@ -61,11 +65,9 @@ bool ksthread_getThreadName(const KSThread thread, char *const buffer, int bufLe
  *
  * @param thread The thread whose state to get.
  *
- * @param threadState Pointer to the threadState value.
- *
- * @return true if state was found.
+ * @return Thread state integer code, default value is TH_STATE_UNSET
  */
-bool ksthread_getThreadState(const KSThread thread, int* threadState);
+int ksthread_getThreadState(const KSThread thread);
 
 /** Get the name of a thread's dispatch queue. Internally, a queue name will
  * never be more than 64 characters long.

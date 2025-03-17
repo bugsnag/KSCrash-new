@@ -1110,8 +1110,7 @@ static void writeAllThreads(const KSCrashReportWriter *const writer, const char 
         KSLOG_DEBUG("Writing %d threads.", threadCount);
         for (int i = 0; i < threadCount; i++) {
             KSThread thread = ksmc_getThreadAtIndex(context, i);
-            int threadRunState = 0;
-            ksthread_getThreadState(thread, &threadRunState);
+            int threadRunState = ksthread_getThreadState(thread);
             if (thread == offendingThread) {
                 writeThread(writer, NULL, crash, context, i, writeNotableAddresses, threadRunState);
             } else {
@@ -1484,8 +1483,7 @@ void kscrashreport_writeRecrashReport(const KSCrash_MonitorContext *const monito
             ksfu_flushBufferedWriter(&bufferedWriter);
             KSThread thread = ksmc_getThreadFromContext(monitorContext->offendingMachineContext);
             int threadIndex = ksmc_indexOfThread(monitorContext->offendingMachineContext, thread);
-            int threadRunState = 0;
-            ksthread_getThreadState(thread, &threadRunState);
+            int threadRunState = ksthread_getThreadState(thread);
             writeThread(writer, KSCrashField_CrashedThread, monitorContext, monitorContext->offendingMachineContext,
                         threadIndex, false, threadRunState);
             ksfu_flushBufferedWriter(&bufferedWriter);
