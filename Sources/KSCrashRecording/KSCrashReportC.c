@@ -1619,7 +1619,7 @@ void kscrashreport_writeStandardReport(const KSCrash_MonitorContext *const monit
         }
         if (g_userSectionWriteCallback != NULL) {
             ksfu_flushBufferedWriter(&bufferedWriter);
-            g_userSectionWriteCallback(writer);
+            g_userSectionWriteCallback(writer, monitorContext->requiresAsyncSafety);
         }
         writer->endContainer(writer);
         ksfu_flushBufferedWriter(&bufferedWriter);
