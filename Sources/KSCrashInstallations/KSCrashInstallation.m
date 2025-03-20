@@ -238,7 +238,7 @@ static CrashHandlerData *g_crashHandlerData;
     @synchronized(handler) {
         g_crashHandlerData = self.crashHandlerData;
 
-        configuration.crashNotifyCallback = ^(const struct KSCrashReportWriter *_Nonnull writer) {
+        configuration.crashNotifyCallback = ^(const struct KSCrashReportWriter *_Nonnull writer, bool requiresAsyncSafety) {
             CrashHandlerData *crashHandlerData = g_crashHandlerData;
             if (crashHandlerData == NULL) {
                 return;
@@ -250,7 +250,7 @@ static CrashHandlerData *g_crashHandlerData;
                 }
             }
             if (crashHandlerData->userCrashCallback != NULL) {
-                crashHandlerData->userCrashCallback(writer);
+                crashHandlerData->userCrashCallback(writer, requiresAsyncSafety);
             }
         };
 

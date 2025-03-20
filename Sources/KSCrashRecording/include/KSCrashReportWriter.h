@@ -225,7 +225,7 @@ typedef struct KSCrashReportWriter {
 
 } NS_SWIFT_NAME(ReportWriter) KSCrashReportWriter;
 
-typedef void (*KSReportWriteCallback)(const KSCrashReportWriter *writer)
+typedef void (*KSReportWriteCallback)(const KSCrashReportWriter *writer, bool requiresAsyncSafety)
     NS_SWIFT_UNAVAILABLE("Use Swift closures instead!");
 
 #ifdef __cplusplus
