@@ -43,7 +43,7 @@ extern "C" {
 
 typedef struct KSMachineContext {
     thread_t thisThread;
-    thread_t allThreads[100];
+    thread_t allThreads[MAX_CAPTURED_THREADS];
     int threadCount;
     bool isCrashedContext;
     bool isCurrentThread;
