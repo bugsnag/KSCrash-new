@@ -36,6 +36,8 @@
 extern "C" {
 #endif
 
+#define MAX_CAPTURED_THREADS 100
+
 /** Suspend the runtime environment.
  */
 void ksmc_suspendEnvironment(thread_act_array_t *suspendedThreads, mach_msg_type_number_t *numSuspendedThreads);
