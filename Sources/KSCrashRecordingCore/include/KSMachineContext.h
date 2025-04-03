@@ -36,7 +36,7 @@
 extern "C" {
 #endif
 
-#define MAX_CAPTURED_THREADS 100
+#define MAX_CAPTURED_THREADS 1000
 
 /** Suspend the runtime environment.
  */

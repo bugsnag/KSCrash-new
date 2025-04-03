@@ -54,7 +54,7 @@
 - (void)testMaxThreadsInContext
 {
     KSMC_NEW_CONTEXT(machineContext);
-    for (int i = 0; i < 105; ++i)
+    for (int i = 0; i < 1005; ++i)
     {
         [NSThread detachNewThreadSelector:@selector(startTheBackgroundJob) toTarget:self withObject:nil];
     }
