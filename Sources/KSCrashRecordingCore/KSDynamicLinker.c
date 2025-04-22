@@ -28,10 +28,13 @@
 
 #include <limits.h>
 #include <mach-o/dyld.h>
+#include <mach-o/dyld_images.h>
 #include <mach-o/getsect.h>
 #include <mach-o/nlist.h>
 #include <mach-o/stab.h>
+#include <os/trace.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "KSLogger.h"
 #include "KSMemory.h"
@@ -55,6 +58,155 @@ typedef struct {
 #pragma pack()
 #define KSDL_SECT_CRASH_INFO "__crash_info"
 
+#pragma mark - Declarations -
+
+static void register_dyld_images(void);
+static void register_for_changes(void);
+static void add_image(const struct mach_header *header, intptr_t slide);
+static void remove_image(const struct mach_header *header, intptr_t slide);
+static intptr_t compute_slide(const struct mach_header *header);
+static const char * get_path(const struct mach_header *header);
+static uintptr_t firstCmdAfterHeader(const struct mach_header * header);
+
+static const struct dyld_all_image_infos *g_all_image_infos;
+
+#pragma mark - Binary images linked list -
+
+// The list head is implemented as a dummy entry to simplify the algorithm.
+// We fetch g_head_dummy.next to get the real head of the list.
+static KSBinaryImage g_head_dummy;
+static _Atomic(KSBinaryImage *) g_images_tail = &g_head_dummy;
+static KSBinaryImage *g_self_image;
+
+static _Atomic(bool) is_image_list_initialized;
+
+void ksdl_binary_images_initialize(void) {
+    bool expected = false;
+    if (!atomic_compare_exchange_strong(&is_image_list_initialized, &expected, true)) {
+        // Already called
+        return;
+    }
+
+    register_dyld_images();
+    register_for_changes();
+}
+
+static void register_dyld_images(void) {
+    // /usr/lib/dyld's mach header is is not exposed via the _dyld APIs, so to be able to include information
+    // about stack frames in dyld`start (for example) we need to acess "_dyld_all_image_infos"
+    task_dyld_info_data_t dyld_info = {0};
+    mach_msg_type_number_t count = TASK_DYLD_INFO_COUNT;
+    kern_return_t kr = task_info(mach_task_self(), TASK_DYLD_INFO, (task_info_t)&dyld_info, &count);
+    if (kr == KERN_SUCCESS && dyld_info.all_image_info_addr) {
+        g_all_image_infos = (const void *)dyld_info.all_image_info_addr;
+
+        intptr_t dyldImageSlide = compute_slide(g_all_image_infos->dyldImageLoadAddress);
+        add_image(g_all_image_infos->dyldImageLoadAddress, dyldImageSlide);
+
+#if TARGET_OS_SIMULATOR
+        // Get the mach header for `dyld_sim` which is not exposed via the _dyld APIs
+        // Note: dladdr() returns `/usr/lib/dyld` as the dli_fname for this image :-?
+        if (g_all_image_infos->infoArray &&
+            strstr(g_all_image_infos->infoArray->imageFilePath, "/usr/lib/dyld_sim")) {
+            const struct mach_header *header = g_all_image_infos->infoArray->imageLoadAddress;
+            add_image(header, compute_slide(header));
+        }
+#endif
+    } else {
+        KSLOG_ERROR("task_info TASK_DYLD_INFO failed: %s", mach_error_string(kr));
+    }
+}
+
+static intptr_t compute_slide(const struct mach_header *header) {
+    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    if (!cmdPtr) {
+        return 0;
+    }
+    for (uint32_t iCmd = 0; iCmd < header->ncmds; iCmd++) {
+        struct load_command *loadCmd = (void *)cmdPtr;
+        switch (loadCmd->cmd) {
+            case LC_SEGMENT: {
+                struct segment_command *segCmd = (void *)cmdPtr;
+                if (strcmp(segCmd->segname, SEG_TEXT) == 0) {
+                    return (intptr_t)header - (intptr_t)segCmd->vmaddr;
+                }
+            }
+            case LC_SEGMENT_64: {
+                struct segment_command_64 *segCmd = (void *)cmdPtr;
+                if (strcmp(segCmd->segname, SEG_TEXT) == 0) {
+                    return (intptr_t)header - (intptr_t)segCmd->vmaddr;
+                }
+            }
+        }
+        cmdPtr += loadCmd->cmdsize;
+    }
+    return 0;
+}
+
+static void register_for_changes(void) {
+    // Register for binary images being loaded and unloaded. dyld calls the add function once
+    // for each library that has already been loaded and then keeps this cache up-to-date
+    // with future changes
+    _dyld_register_func_for_add_image(&add_image);
+    _dyld_register_func_for_remove_image(&remove_image);
+}
+
+static void add_image(const struct mach_header *header, intptr_t slide) {
+    KSBinaryImage *newImage = calloc(1, sizeof(KSBinaryImage));
+    if (newImage == NULL) {
+        return;
+    }
+
+    if (!ksdl_getBinaryImageForHeader(header, slide, newImage)) {
+        free(newImage);
+        return;
+    }
+
+    KSBinaryImage *oldTail = atomic_exchange(&g_images_tail, newImage);
+    atomic_store(&oldTail->next, newImage);
+
+    if (header == &__dso_handle) {
+        g_self_image = newImage;
+    }
+}
+
+static void remove_image(const struct mach_header *header, intptr_t slide) {
+    KSBinaryImage existingImage = { 0 };
+    if (!ksdl_getBinaryImageForHeader(header, slide, &existingImage)) {
+        return;
+    }
+
+    for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
+        if (img->vmAddress == existingImage.vmAddress) {
+            // To avoid a destructive operation that could lead thread safety problems,
+            // we maintain the image record, but mark it as unloaded
+            img->unloaded = true;
+        }
+    }
+}
+
+#pragma mark - API -
+
+static const char * get_path(const struct mach_header *header) {
+    Dl_info DlInfo = {0};
+    dladdr(header, &DlInfo);
+    if (DlInfo.dli_fname) {
+        return DlInfo.dli_fname;
+    }
+    if (g_all_image_infos &&
+        header == g_all_image_infos->dyldImageLoadAddress) {
+        return g_all_image_infos->dyldPath;
+    }
+#if TARGET_OS_SIMULATOR
+    if (g_all_image_infos &&
+        g_all_image_infos->infoArray &&
+        header == g_all_image_infos->infoArray[0].imageLoadAddress) {
+        return g_all_image_infos->infoArray[0].imageFilePath;
+    }
+#endif
+    return NULL;
+}
+
 /** Get the address of the first command following a header (which will be of
  * type struct load_command).
  *
@@ -63,8 +215,12 @@ typedef struct {
  * @return The address of the first command, or NULL if none was found (which
  *         should not happen unless the header or image is corrupt).
  */
-static uintptr_t firstCmdAfterHeader(const struct mach_header *const header)
+static uintptr_t firstCmdAfterHeader(const struct mach_header * header)
 {
+    if (header == NULL) {
+      return 0;
+    }
+
     switch (header->magic) {
         case MH_MAGIC:
         case MH_CIGAM:
@@ -152,37 +308,42 @@ static uintptr_t segmentBaseOfImageIndex(const uint32_t idx)
     return 0;
 }
 
-uint32_t ksdl_imageNamed(const char *const imageName, bool exactMatch)
+KSBinaryImage *ksdl_get_images(void) {
+    return atomic_load(&g_head_dummy.next);
+}
+
+KSBinaryImage *ksdl_imageNamed(const char *const imageName, bool exactMatch)
 {
     if (imageName != NULL) {
-        const uint32_t imageCount = _dyld_image_count();
-
-        for (uint32_t iImg = 0; iImg < imageCount; iImg++) {
-            const char *name = _dyld_get_image_name(iImg);
-            if (exactMatch) {
-                if (strcmp(name, imageName) == 0) {
-                    return iImg;
+        for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
+            if (img->name == NULL) {
+                continue; // name is null if the index is out of range per dyld(3)
+            } else if (img->unloaded == true) {
+                continue; // ignore unloaded libraries
+            } else if (exactMatch) {
+                if (strcmp(img->name, imageName) == 0) {
+                    return img;
                 }
             } else {
-                if (strstr(name, imageName) != NULL) {
-                    return iImg;
+                if (strstr(img->name, imageName) != NULL) {
+                    return img;
                 }
             }
         }
     }
-    return UINT32_MAX;
+
+    return NULL;
 }
 
 const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch)
 {
     if (imageName != NULL) {
-        const uint32_t iImg = ksdl_imageNamed(imageName, exactMatch);
-        if (iImg != UINT32_MAX) {
-            const struct mach_header *header = _dyld_get_image_header(iImg);
-            if (header != NULL) {
-                uintptr_t cmdPtr = firstCmdAfterHeader(header);
+        KSBinaryImage *img = ksdl_imageNamed(imageName, exactMatch);
+        if (img != NULL) {
+            if (img->header != NULL) {
+                uintptr_t cmdPtr = firstCmdAfterHeader(img->header);
                 if (cmdPtr != 0) {
-                    for (uint32_t iCmd = 0; iCmd < header->ncmds; iCmd++) {
+                    for (uint32_t iCmd = 0; iCmd < img->header->ncmds; iCmd++) {
                         const struct load_command *loadCmd = (struct load_command *)cmdPtr;
                         if (loadCmd->cmd == LC_UUID) {
                             struct uuid_command *uuidCmd = (struct uuid_command *)cmdPtr;
@@ -197,6 +358,7 @@ const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch)
     return NULL;
 }
 
+// TODO: Potentially rework on Symbolication task
 bool ksdl_dladdr(const uintptr_t address, Dl_info *const info)
 {
     info->dli_fname = NULL;
@@ -287,11 +449,11 @@ static bool isValidCrashInfoMessage(const char *str)
     return false;
 }
 
-static void getCrashInfo(const struct mach_header *header, KSBinaryImage *buffer)
+static void getCrashInfo(KSBinaryImage *buffer)
 {
     unsigned long size = 0;
     crash_info_t *crashInfo =
-        (crash_info_t *)getsectiondata((mach_header_t *)header, SEG_DATA, KSDL_SECT_CRASH_INFO, &size);
+        (crash_info_t *)getsectiondata((mach_header_t *)buffer->header, SEG_DATA, KSDL_SECT_CRASH_INFO, &size);
     if (crashInfo == NULL) {
         return;
     }
@@ -333,23 +495,19 @@ static void getCrashInfo(const struct mach_header *header, KSBinaryImage *buffer
     }
 }
 
-int ksdl_imageCount(void) { return (int)_dyld_image_count(); }
-
-bool ksdl_getBinaryImage(int index, KSBinaryImage *buffer)
+bool ksdl_getBinaryImageForHeader(const struct mach_header *header, intptr_t slide, KSBinaryImage *buffer)
 {
-    const struct mach_header *header = _dyld_get_image_header((unsigned)index);
-    if (header == NULL) {
+    // Early exit conditions; this is not a valid/useful binary image
+    // 1. We can't find a sensible Mach command
+    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    if (cmdPtr == 0) {
         return false;
     }
 
-    return ksdl_getBinaryImageForHeader((const void *)header, _dyld_get_image_name((unsigned)index), buffer);
-}
-
-bool ksdl_getBinaryImageForHeader(const void *const header_ptr, const char *const image_name, KSBinaryImage *buffer)
-{
-    const struct mach_header *header = (const struct mach_header *)header_ptr;
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
-    if (cmdPtr == 0) {
+    // 2. The image doesn't have a name.  Note: running with a debugger attached causes this condition to match.
+    const char *imageName = get_path(header);
+    if (!imageName) {
+        KSLOG_ERROR("Could not find name for mach header @ %p", header);
         return false;
     }
 
@@ -393,17 +551,25 @@ bool ksdl_getBinaryImageForHeader(const void *const header_ptr, const char *cons
         cmdPtr += loadCmd->cmdsize;
     }
 
-    buffer->address = (uintptr_t)header;
+    // Sanity checks that should never fail
+    if (((uintptr_t)imageVmAddr + (uintptr_t)slide) != (uintptr_t)header) {
+        KSLOG_ERROR("Mach header != (vmaddr + slide) for %s; symbolication will be compromised.", imageName);
+    }
+
+    buffer->header = header;
     buffer->vmAddress = imageVmAddr;
     buffer->size = imageSize;
-    buffer->name = image_name;
+    buffer->name = imageName;
     buffer->uuid = uuid;
+    buffer->slide = slide;
+    buffer->unloaded = FALSE;
     buffer->cpuType = header->cputype;
     buffer->cpuSubType = header->cpusubtype;
     buffer->majorVersion = version >> 16;
     buffer->minorVersion = (version >> 8) & 0xff;
     buffer->revisionVersion = version & 0xff;
-    getCrashInfo(header, buffer);
+    getCrashInfo(buffer);
+    atomic_store(&buffer->next, NULL);
 
     return true;
 }

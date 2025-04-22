@@ -34,6 +34,12 @@
 
 @implementation KSDynamicLinker_Tests
 
++ (void)setUp {
+    [super setUp];
+    ksdl_binary_images_initialize();
+    ksdl_get_images(); // Ensure call stack can be symbolicated
+}
+
 - (void)testImageUUID
 {
     // Just abritrarily grab the name of the 4th image...
@@ -62,8 +68,8 @@
 
 - (void)testGetImageNameNULL
 {
-    uint32_t imageIdx = ksdl_imageNamed(NULL, false);
-    XCTAssertEqual(imageIdx, UINT32_MAX, @"");
+    KSBinaryImage *image = ksdl_imageNamed(NULL, false);
+    XCTAssertEqual(image, NULL, @"");
 }
 
 @end
