@@ -116,7 +116,7 @@ NS_SWIFT_NAME(CrashInstallation)
 - (void)addConditionalAlertWithTitle:(NSString *)title
                              message:(nullable NSString *)message
                            yesAnswer:(NSString *)yesAnswer
-                            noAnswer:(nullable NSString *)noAnswer;
+                            noAnswer:(nullable NSString *)noAnswer NS_EXTENSION_UNAVAILABLE_IOS("Alert Filter requires NSApplication, which is unavailable on watchOS extensions");
 
 /** Show an alert before sending any reports. Reports will be unconditionally sent
  * when the alert is dismissed.
@@ -127,7 +127,7 @@ NS_SWIFT_NAME(CrashInstallation)
  */
 - (void)addUnconditionalAlertWithTitle:(NSString *)title
                                message:(nullable NSString *)message
-                     dismissButtonText:(NSString *)dismissButtonText;
+                     dismissButtonText:(NSString *)dismissButtonText NS_EXTENSION_UNAVAILABLE_IOS("Alert Filter requires NSApplication, which is unavailable on watchOS extensions");
 
 /** Validates properties of installation.
  *
