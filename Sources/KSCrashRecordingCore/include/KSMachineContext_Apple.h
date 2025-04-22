@@ -30,6 +30,7 @@
 #include <mach/mach_types.h>
 #include <stdbool.h>
 #include <sys/ucontext.h>
+#include "KSMachineContext.h"
 
 #ifdef __cplusplus
 extern "C" {
