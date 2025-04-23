@@ -37,6 +37,7 @@
 #import "KSJSONCodecObjC.h"
 #import "KSLogger.h"
 #import "KSNSErrorHelper.h"
+#import "KSDynamicLinker.h"
 
 /** Max number of properties that can be defined for writing to the report */
 #define kMaxProperties 500
