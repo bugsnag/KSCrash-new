@@ -123,6 +123,21 @@ KSBinaryImage *ksdl_imageNamed(const char *const imageName, bool exactMatch);
  */
 const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch);
 
+/**
+ * Returns the process's main image
+ */
+KSBinaryImage *ksdl_get_main_image(void);
+
+/**
+ * Returns the image that contains KSCrash.
+ */
+KSBinaryImage *ksdl_get_self_image(void);
+
+/**
+ * Find the loaded binary image that contains the specified instruction address.
+*/
+KSBinaryImage *ksdl_image_at_address(const uintptr_t address);
+
 /** async-safe version of dladdr.
  *
  * This method searches the dynamic loader for information about any image
@@ -138,6 +153,21 @@ const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch);
  * @return true if at least some information was found.
  */
 bool ksdl_dladdr(const uintptr_t address, Dl_info *const info);
+
+/**
+ * Resets mach header data (for unit tests).
+ */
+void ksdl_test_support_mach_headers_reset(void);
+
+/**
+ * Add a binary image (for unit tests).
+ */
+void ksdl_test_support_mach_headers_add_image(const struct mach_header *mh, intptr_t slide);
+
+/**
+ * Remove a binary image (for unit tests).
+ */
+void ksdl_test_support_mach_headers_remove_image(const struct mach_header *mh, intptr_t slide);
 
 #ifdef __cplusplus
 }

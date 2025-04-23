@@ -234,6 +234,7 @@ static uintptr_t firstCmdAfterHeader(const struct mach_header * header)
     }
 }
 
+// TODO: on symbolication task compare with `contains_address`
 /** Get the image index that the specified address is part of.
  *
  * @param address The address to examine.
@@ -353,6 +354,36 @@ const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch)
                     }
                 }
             }
+        }
+    }
+    return NULL;
+}
+
+KSBinaryImage *ksdl_get_main_image(void) {
+    for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
+        if (img->header->filetype == MH_EXECUTE) {
+            return img;
+        }
+    }
+    return NULL;
+}
+
+KSBinaryImage *ksdl_get_self_image(void) {
+    return g_self_image;
+}
+
+static bool contains_address(KSBinaryImage *img, vm_address_t address) {
+    if (img->unloaded) {
+        return false;
+    }
+    vm_address_t imageStart = (vm_address_t)img->header;
+    return address >= imageStart && address < (imageStart + img->size);
+}
+
+KSBinaryImage *ksdl_image_at_address(const uintptr_t address){
+    for (KSBinaryImage *img = ksdl_get_images(); img; img = atomic_load(&img->next)) {
+        if (contains_address(img, address)) {
+            return img;
         }
     }
     return NULL;
@@ -572,4 +603,29 @@ bool ksdl_getBinaryImageForHeader(const struct mach_header *header, intptr_t sli
     atomic_store(&buffer->next, NULL);
 
     return true;
+}
+
+void ksdl_test_support_mach_headers_reset(void) {
+    // Erase all current images
+    KSBinaryImage *next = NULL;
+    for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = next) {
+        next = atomic_load(&img->next);
+        free(img);
+    }
+
+    // Reset cached data
+    atomic_store(&g_head_dummy.next, NULL);
+    atomic_store(&g_images_tail, &g_head_dummy);
+    g_self_image = NULL;
+
+    // Force bsg_mach_headers_initialize to run again when requested.
+    atomic_store(&is_image_list_initialized, false);
+}
+
+void ksdl_test_support_mach_headers_add_image(const struct mach_header *header, intptr_t slide) {
+    add_image(header, slide);
+}
+
+void ksdl_test_support_mach_headers_remove_image(const struct mach_header *header, intptr_t slide) {
+    remove_image(header, slide);
 }
