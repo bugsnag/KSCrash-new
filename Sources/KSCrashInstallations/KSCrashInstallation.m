@@ -237,6 +237,7 @@ static CrashHandlerData *g_crashHandlerData;
     KSCrash *handler = [KSCrash sharedInstance];
     @synchronized(handler) {
         g_crashHandlerData = self.crashHandlerData;
+        ksdl_binary_images_initialize();
 
         configuration.crashNotifyCallback = ^(const struct KSCrashReportWriter *_Nonnull writer, bool requiresAsyncSafety) {
             CrashHandlerData *crashHandlerData = g_crashHandlerData;

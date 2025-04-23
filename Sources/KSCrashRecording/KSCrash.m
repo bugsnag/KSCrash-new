@@ -236,6 +236,8 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
     self.configuration = [configuration copy] ?: [KSCrashConfiguration new];
     self.configuration.installPath = configuration.installPath ?: kscrash_getDefaultInstallPath();
 
+    ksdl_binary_images_initialize();
+
     if (self.configuration.reportStoreConfiguration.appName == nil) {
         self.configuration.reportStoreConfiguration.appName = self.bundleName;
     }

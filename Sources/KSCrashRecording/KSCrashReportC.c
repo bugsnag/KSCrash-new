@@ -790,6 +790,7 @@ static void writeAddressReferencedByString(const KSCrashReportWriter *const writ
  */
 static void writeBacktrace(const KSCrashReportWriter *const writer, const char *const key, KSStackCursor *stackCursor)
 {
+    // TODO: DARIA MARK IMAGES as INCRASHREPORT
     writer->beginObject(writer, key);
     {
         writer->beginArray(writer, KSCrashField_Contents);
@@ -1132,36 +1133,31 @@ static void writeAllThreads(const KSCrashReportWriter *const writer, const char 
  *
  * @param index Which image to write about.
  */
-static void writeBinaryImage(const KSCrashReportWriter *const writer, const char *const key, const int index)
+static void writeBinaryImage(const KSCrashReportWriter *const writer, const char *const key, KSBinaryImage *img)
 {
-    KSBinaryImage image = { 0 };
-    if (!ksdl_getBinaryImage(index, &image)) {
-        return;
-    }
-
     writer->beginObject(writer, key);
     {
-        writer->addUIntegerElement(writer, KSCrashField_ImageAddress, image.address);
-        writer->addUIntegerElement(writer, KSCrashField_ImageVmAddress, image.vmAddress);
-        writer->addUIntegerElement(writer, KSCrashField_ImageSize, image.size);
-        writer->addStringElement(writer, KSCrashField_Name, image.name);
-        writer->addUUIDElement(writer, KSCrashField_UUID, image.uuid);
-        writer->addIntegerElement(writer, KSCrashField_CPUType, image.cpuType);
-        writer->addIntegerElement(writer, KSCrashField_CPUSubType, image.cpuSubType);
-        writer->addUIntegerElement(writer, KSCrashField_ImageMajorVersion, image.majorVersion);
-        writer->addUIntegerElement(writer, KSCrashField_ImageMinorVersion, image.minorVersion);
-        writer->addUIntegerElement(writer, KSCrashField_ImageRevisionVersion, image.revisionVersion);
-        if (image.crashInfoMessage != NULL) {
-            writer->addStringElement(writer, KSCrashField_ImageCrashInfoMessage, image.crashInfoMessage);
+        writer->addUIntegerElement(writer, KSCrashField_ImageAddress, (uintptr_t)img->header);
+        writer->addUIntegerElement(writer, KSCrashField_ImageVmAddress, img->vmAddress);
+        writer->addUIntegerElement(writer, KSCrashField_ImageSize, img->size);
+        writer->addStringElement(writer, KSCrashField_Name, img->name);
+        writer->addUUIDElement(writer, KSCrashField_UUID, img->uuid);
+        writer->addIntegerElement(writer, KSCrashField_CPUType, img->cpuType);
+        writer->addIntegerElement(writer, KSCrashField_CPUSubType, img->cpuSubType);
+        writer->addUIntegerElement(writer, KSCrashField_ImageMajorVersion, img->majorVersion);
+        writer->addUIntegerElement(writer, KSCrashField_ImageMinorVersion, img->minorVersion);
+        writer->addUIntegerElement(writer, KSCrashField_ImageRevisionVersion, img->revisionVersion);
+        if (img->crashInfoMessage != NULL) {
+            writer->addStringElement(writer, KSCrashField_ImageCrashInfoMessage, img->crashInfoMessage);
         }
-        if (image.crashInfoMessage2 != NULL) {
-            writer->addStringElement(writer, KSCrashField_ImageCrashInfoMessage2, image.crashInfoMessage2);
+        if (img->crashInfoMessage2 != NULL) {
+            writer->addStringElement(writer, KSCrashField_ImageCrashInfoMessage2, img->crashInfoMessage2);
         }
-        if (image.crashInfoBacktrace != NULL) {
-            writer->addStringElement(writer, KSCrashField_ImageCrashInfoBacktrace, image.crashInfoBacktrace);
+        if (img->crashInfoBacktrace != NULL) {
+            writer->addStringElement(writer, KSCrashField_ImageCrashInfoBacktrace, img->crashInfoBacktrace);
         }
-        if (image.crashInfoSignature != NULL) {
-            writer->addStringElement(writer, KSCrashField_ImageCrashInfoSignature, image.crashInfoSignature);
+        if (img->crashInfoSignature != NULL) {
+            writer->addStringElement(writer, KSCrashField_ImageCrashInfoSignature, img->crashInfoSignature);
         }
     }
     writer->endContainer(writer);
@@ -1175,12 +1171,13 @@ static void writeBinaryImage(const KSCrashReportWriter *const writer, const char
  */
 static void writeBinaryImages(const KSCrashReportWriter *const writer, const char *const key)
 {
-    const int imageCount = ksdl_imageCount();
-
     writer->beginArray(writer, key);
     {
-        for (int iImg = 0; iImg < imageCount; iImg++) {
-            writeBinaryImage(writer, NULL, iImg);
+        for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
+            // TODO: DARIA Uncomment when symbolication can mark this field
+            //if (img->inCrashReport) {
+                writeBinaryImage(writer, NULL, img);
+            //}
         }
     }
     writer->endContainer(writer);

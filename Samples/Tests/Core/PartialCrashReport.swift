@@ -27,6 +27,14 @@
 import Foundation
 
 struct PartialCrashReport: Decodable {
+    struct BinaryImage: Decodable {
+        var cpu_subtype: Int
+        var cpu_type: Int
+        var image_addr: UInt64
+        var image_size: Int
+        var name: String
+        var uuid: String
+    }
     struct Crash: Decodable {
         struct Error: Decodable {
             struct Signal: Decodable {
@@ -80,4 +88,5 @@ struct PartialCrashReport: Decodable {
     }
 
     var crash: Crash?
+    var binary_images: [BinaryImage]?
 }

@@ -288,7 +288,7 @@ static const char *getCurrentCPUArch(void)
  *
  * @return YES if the device is jailbroken.
  */
-static bool isJailbroken(void) { return ksdl_imageNamed("MobileSubstrate", false) != UINT32_MAX; }
+static bool isJailbroken(void) { return ksdl_imageNamed("MobileSubstrate", false) != NULL; }
 
 /** Check if the app is started using Rosetta translation environment
  *

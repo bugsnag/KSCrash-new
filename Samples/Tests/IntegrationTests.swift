@@ -71,6 +71,20 @@ final class CppTests: IntegrationTestBase {
             .compactMap(\.symbol_name).first
             .flatMap(CrashReportFilterDemangle.demangledCppSymbol)
         XCTAssertEqual(topSymbol, "sample_namespace::Report::crash()")
+        let imageList = rawReport.binary_images
+
+        var sampleAppFound = false
+        if let imageList = imageList {
+            for item in imageList {
+                XCTAssertNotNil(item)
+                if item.name.contains("Sample.app/Sample") {
+                    sampleAppFound = true
+                    XCTAssertNotEqual(item.image_addr, 0)
+                    XCTAssertNotEqual(item.image_size, 0)
+                }
+            }
+            XCTAssertTrue(sampleAppFound)
+        }
 
         let appleReport = try launchAndReportCrash()
         XCTAssertTrue(appleReport.contains("C++ exception"))
