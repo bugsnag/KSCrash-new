@@ -88,5 +88,5 @@ struct PartialCrashReport: Decodable {
     }
 
     var crash: Crash?
-    var binary_images: [BinaryImage]
+    var binary_images: [BinaryImage]?
 }
