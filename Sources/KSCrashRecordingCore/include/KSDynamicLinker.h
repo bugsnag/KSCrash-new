@@ -148,22 +148,6 @@ KSBinaryImage *ksdl_image_at_address(const uintptr_t address);
  */
 uintptr_t ksdl_first_cmd_after_header(const struct mach_header * header);
 
-/** async-safe version of dladdr.
- *
- * This method searches the dynamic loader for information about any image
- * containing the specified address. It may not be entirely successful in
- * finding information, in which case any fields it could not find will be set
- * to NULL.
- *
- * Unlike dladdr(), this method does not make use of locks, and does not call
- * async-unsafe functions.
- *
- * @param address The address to search for.
- * @param info Gets filled out by this function.
- * @return true if at least some information was found.
- */
-bool ksdl_dladdr(const uintptr_t address, Dl_info *const info);
-
 /**
  * Resets mach header data (for unit tests).
  */

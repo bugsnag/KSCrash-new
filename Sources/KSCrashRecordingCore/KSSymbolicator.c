@@ -102,6 +102,7 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
         return false;
     }
 
+    image->inCrashReport = true;
     const uintptr_t slide = (uintptr_t)image->slide;
 
     const segment_command_t *linkedit = NULL;

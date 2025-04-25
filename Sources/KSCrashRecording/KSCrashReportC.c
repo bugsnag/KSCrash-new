@@ -790,7 +790,6 @@ static void writeAddressReferencedByString(const KSCrashReportWriter *const writ
  */
 static void writeBacktrace(const KSCrashReportWriter *const writer, const char *const key, KSStackCursor *stackCursor)
 {
-    // TODO: DARIA MARK IMAGES as INCRASHREPORT
     writer->beginObject(writer, key);
     {
         writer->beginArray(writer, KSCrashField_Contents);
@@ -1174,10 +1173,9 @@ static void writeBinaryImages(const KSCrashReportWriter *const writer, const cha
     writer->beginArray(writer, key);
     {
         for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
-            // TODO: DARIA Uncomment when symbolication can mark this field
-            //if (img->inCrashReport) {
+            if (img->inCrashReport) {
                 writeBinaryImage(writer, NULL, img);
-            //}
+            }
         }
     }
     writer->endContainer(writer);
