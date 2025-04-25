@@ -66,7 +66,6 @@ static void add_image(const struct mach_header *header, intptr_t slide);
 static void remove_image(const struct mach_header *header, intptr_t slide);
 static intptr_t compute_slide(const struct mach_header *header);
 static const char * get_path(const struct mach_header *header);
-static uintptr_t firstCmdAfterHeader(const struct mach_header * header);
 
 static const struct dyld_all_image_infos *g_all_image_infos;
 
@@ -118,7 +117,7 @@ static void register_dyld_images(void) {
 }
 
 static intptr_t compute_slide(const struct mach_header *header) {
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (!cmdPtr) {
         return 0;
     }
@@ -207,15 +206,7 @@ static const char * get_path(const struct mach_header *header) {
     return NULL;
 }
 
-/** Get the address of the first command following a header (which will be of
- * type struct load_command).
- *
- * @param header The header to get commands for.
- *
- * @return The address of the first command, or NULL if none was found (which
- *         should not happen unless the header or image is corrupt).
- */
-static uintptr_t firstCmdAfterHeader(const struct mach_header * header)
+uintptr_t ksdl_first_cmd_after_header(const struct mach_header * header)
 {
     if (header == NULL) {
       return 0;
@@ -250,7 +241,7 @@ static uint32_t imageIndexContainingAddress(const uintptr_t address)
         if (header != NULL) {
             // Look for a segment command with this address within its range.
             uintptr_t addressWSlide = address - (uintptr_t)_dyld_get_image_vmaddr_slide(iImg);
-            uintptr_t cmdPtr = firstCmdAfterHeader(header);
+            uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
             if (cmdPtr == 0) {
                 continue;
             }
@@ -286,7 +277,7 @@ static uintptr_t segmentBaseOfImageIndex(const uint32_t idx)
     const struct mach_header *header = _dyld_get_image_header(idx);
 
     // Look for a segment command and return the file image address.
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (cmdPtr == 0) {
         return 0;
     }
@@ -342,7 +333,7 @@ const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch)
         KSBinaryImage *img = ksdl_imageNamed(imageName, exactMatch);
         if (img != NULL) {
             if (img->header != NULL) {
-                uintptr_t cmdPtr = firstCmdAfterHeader(img->header);
+                uintptr_t cmdPtr = ksdl_first_cmd_after_header(img->header);
                 if (cmdPtr != 0) {
                     for (uint32_t iCmd = 0; iCmd < img->header->ncmds; iCmd++) {
                         const struct load_command *loadCmd = (struct load_command *)cmdPtr;
@@ -415,7 +406,7 @@ bool ksdl_dladdr(const uintptr_t address, Dl_info *const info)
     // Find symbol tables and get whichever symbol is closest to the address.
     const nlist_t *bestMatch = NULL;
     uintptr_t bestDistance = ULONG_MAX;
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (cmdPtr == 0) {
         return false;
     }
@@ -530,7 +521,7 @@ bool ksdl_getBinaryImageForHeader(const struct mach_header *header, intptr_t sli
 {
     // Early exit conditions; this is not a valid/useful binary image
     // 1. We can't find a sensible Mach command
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (cmdPtr == 0) {
         return false;
     }

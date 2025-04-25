@@ -138,6 +138,16 @@ KSBinaryImage *ksdl_get_self_image(void);
 */
 KSBinaryImage *ksdl_image_at_address(const uintptr_t address);
 
+/** Get the address of the first command following a header (which will be of
+ * type struct load_command).
+ *
+ * @param header The header to get commands for.
+ *
+ * @return The address of the first command, or NULL if none was found (which
+ *         should not happen unless the header or image is corrupt).
+ */
+uintptr_t ksdl_first_cmd_after_header(const struct mach_header * header);
+
 /** async-safe version of dladdr.
  *
  * This method searches the dynamic loader for information about any image
