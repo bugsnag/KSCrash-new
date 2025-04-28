@@ -55,6 +55,7 @@
 #include "KSString.h"
 #include "KSSystemCapabilities.h"
 #include "KSThread.h"
+#include "KSStringConversion.h"
 
 // #define KSLogger_LocalLevel TRACE
 #include <errno.h>
@@ -899,7 +900,10 @@ static void writeNotableStackContents(const KSCrashReportWriter *const writer,
     char nameBuffer[40];
     for (uintptr_t address = lowAddress; address < highAddress; address += sizeof(address)) {
         if (ksmem_copySafely((void *)address, &contentsAsPointer, sizeof(contentsAsPointer))) {
-            sprintf(nameBuffer, "stack@%p", (void *)address);
+            memcpy(nameBuffer, "stack@0x", 8);
+            char *addressStart = nameBuffer + 8;
+            size_t addressLength = kssc_uint64_to_hex((uintptr_t)address, addressStart, 1, false);
+            addressStart[addressLength] = 0;
             writeMemoryContentsIfNotable(writer, nameBuffer, contentsAsPointer);
         }
     }
