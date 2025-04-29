@@ -75,10 +75,8 @@ void kssc_uuid_to_string(uuid_t uuid, char* dst) {
             kssc_uint64_to_hex(uuid[valueIndex++], currentDst, 2, true);
             currentDst += 2;
         }
-        if (segmentIndex != 5) {
+        if (segmentIndex != 4) {
             memcpy(currentDst++, "-", 1);
         }
     }
-    
-    dst[36] = 0;
 }
