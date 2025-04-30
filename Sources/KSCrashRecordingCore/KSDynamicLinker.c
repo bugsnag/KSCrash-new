@@ -66,7 +66,6 @@ static void add_image(const struct mach_header *header, intptr_t slide);
 static void remove_image(const struct mach_header *header, intptr_t slide);
 static intptr_t compute_slide(const struct mach_header *header);
 static const char * get_path(const struct mach_header *header);
-static uintptr_t firstCmdAfterHeader(const struct mach_header * header);
 
 static const struct dyld_all_image_infos *g_all_image_infos;
 
@@ -118,7 +117,7 @@ static void register_dyld_images(void) {
 }
 
 static intptr_t compute_slide(const struct mach_header *header) {
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (!cmdPtr) {
         return 0;
     }
@@ -207,15 +206,7 @@ static const char * get_path(const struct mach_header *header) {
     return NULL;
 }
 
-/** Get the address of the first command following a header (which will be of
- * type struct load_command).
- *
- * @param header The header to get commands for.
- *
- * @return The address of the first command, or NULL if none was found (which
- *         should not happen unless the header or image is corrupt).
- */
-static uintptr_t firstCmdAfterHeader(const struct mach_header * header)
+uintptr_t ksdl_first_cmd_after_header(const struct mach_header * header)
 {
     if (header == NULL) {
       return 0;
@@ -232,81 +223,6 @@ static uintptr_t firstCmdAfterHeader(const struct mach_header * header)
             // Header is corrupt
             return 0;
     }
-}
-
-// TODO: on symbolication task compare with `contains_address`
-/** Get the image index that the specified address is part of.
- *
- * @param address The address to examine.
- * @return The index of the image it is part of, or UINT_MAX if none was found.
- */
-static uint32_t imageIndexContainingAddress(const uintptr_t address)
-{
-    const uint32_t imageCount = _dyld_image_count();
-    const struct mach_header *header = 0;
-
-    for (uint32_t iImg = 0; iImg < imageCount; iImg++) {
-        header = _dyld_get_image_header(iImg);
-        if (header != NULL) {
-            // Look for a segment command with this address within its range.
-            uintptr_t addressWSlide = address - (uintptr_t)_dyld_get_image_vmaddr_slide(iImg);
-            uintptr_t cmdPtr = firstCmdAfterHeader(header);
-            if (cmdPtr == 0) {
-                continue;
-            }
-            for (uint32_t iCmd = 0; iCmd < header->ncmds; iCmd++) {
-                const struct load_command *loadCmd = (struct load_command *)cmdPtr;
-                if (loadCmd->cmd == LC_SEGMENT) {
-                    const struct segment_command *segCmd = (struct segment_command *)cmdPtr;
-                    if (addressWSlide >= segCmd->vmaddr && addressWSlide < segCmd->vmaddr + segCmd->vmsize) {
-                        return iImg;
-                    }
-                } else if (loadCmd->cmd == LC_SEGMENT_64) {
-                    const struct segment_command_64 *segCmd = (struct segment_command_64 *)cmdPtr;
-                    if (addressWSlide >= segCmd->vmaddr && addressWSlide < segCmd->vmaddr + segCmd->vmsize) {
-                        return iImg;
-                    }
-                }
-                cmdPtr += loadCmd->cmdsize;
-            }
-        }
-    }
-    return UINT_MAX;
-}
-
-/** Get the segment base address of the specified image.
- *
- * This is required for any symtab command offsets.
- *
- * @param idx The image index.
- * @return The image's base address, or 0 if none was found.
- */
-static uintptr_t segmentBaseOfImageIndex(const uint32_t idx)
-{
-    const struct mach_header *header = _dyld_get_image_header(idx);
-
-    // Look for a segment command and return the file image address.
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
-    if (cmdPtr == 0) {
-        return 0;
-    }
-    for (uint32_t i = 0; i < header->ncmds; i++) {
-        const struct load_command *loadCmd = (struct load_command *)cmdPtr;
-        if (loadCmd->cmd == LC_SEGMENT) {
-            const struct segment_command *segmentCmd = (struct segment_command *)cmdPtr;
-            if (strcmp(segmentCmd->segname, SEG_LINKEDIT) == 0) {
-                return segmentCmd->vmaddr - segmentCmd->fileoff;
-            }
-        } else if (loadCmd->cmd == LC_SEGMENT_64) {
-            const struct segment_command_64 *segmentCmd = (struct segment_command_64 *)cmdPtr;
-            if (strcmp(segmentCmd->segname, SEG_LINKEDIT) == 0) {
-                return (uintptr_t)(segmentCmd->vmaddr - segmentCmd->fileoff);
-            }
-        }
-        cmdPtr += loadCmd->cmdsize;
-    }
-
-    return 0;
 }
 
 KSBinaryImage *ksdl_get_images(void) {
@@ -342,7 +258,7 @@ const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch)
         KSBinaryImage *img = ksdl_imageNamed(imageName, exactMatch);
         if (img != NULL) {
             if (img->header != NULL) {
-                uintptr_t cmdPtr = firstCmdAfterHeader(img->header);
+                uintptr_t cmdPtr = ksdl_first_cmd_after_header(img->header);
                 if (cmdPtr != 0) {
                     for (uint32_t iCmd = 0; iCmd < img->header->ncmds; iCmd++) {
                         const struct load_command *loadCmd = (struct load_command *)cmdPtr;
@@ -387,80 +303,6 @@ KSBinaryImage *ksdl_image_at_address(const uintptr_t address){
         }
     }
     return NULL;
-}
-
-// TODO: Potentially rework on Symbolication task
-bool ksdl_dladdr(const uintptr_t address, Dl_info *const info)
-{
-    info->dli_fname = NULL;
-    info->dli_fbase = NULL;
-    info->dli_sname = NULL;
-    info->dli_saddr = NULL;
-
-    const uint32_t idx = imageIndexContainingAddress(address);
-    if (idx == UINT_MAX) {
-        return false;
-    }
-    const struct mach_header *header = _dyld_get_image_header(idx);
-    const uintptr_t imageVMAddrSlide = (uintptr_t)_dyld_get_image_vmaddr_slide(idx);
-    const uintptr_t addressWithSlide = address - imageVMAddrSlide;
-    const uintptr_t segmentBase = segmentBaseOfImageIndex(idx) + imageVMAddrSlide;
-    if (segmentBase == 0) {
-        return false;
-    }
-
-    info->dli_fname = _dyld_get_image_name(idx);
-    info->dli_fbase = (void *)header;
-
-    // Find symbol tables and get whichever symbol is closest to the address.
-    const nlist_t *bestMatch = NULL;
-    uintptr_t bestDistance = ULONG_MAX;
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
-    if (cmdPtr == 0) {
-        return false;
-    }
-    for (uint32_t iCmd = 0; iCmd < header->ncmds; iCmd++) {
-        const struct load_command *loadCmd = (struct load_command *)cmdPtr;
-        if (loadCmd->cmd == LC_SYMTAB) {
-            const struct symtab_command *symtabCmd = (struct symtab_command *)cmdPtr;
-            const nlist_t *symbolTable = (nlist_t *)(segmentBase + symtabCmd->symoff);
-            const uintptr_t stringTable = segmentBase + symtabCmd->stroff;
-
-            for (uint32_t iSym = 0; iSym < symtabCmd->nsyms; iSym++) {
-                // Skip all debug N_STAB symbols
-                if ((symbolTable[iSym].n_type & N_STAB) != 0) {
-                    continue;
-                }
-
-                // If n_value is 0, the symbol refers to an external object.
-                if (symbolTable[iSym].n_value != 0) {
-                    uintptr_t symbolBase = symbolTable[iSym].n_value;
-                    uintptr_t currentDistance = addressWithSlide - symbolBase;
-                    if ((addressWithSlide >= symbolBase) && (currentDistance <= bestDistance)) {
-                        bestMatch = symbolTable + iSym;
-                        bestDistance = currentDistance;
-                    }
-                }
-            }
-            if (bestMatch != NULL) {
-                info->dli_saddr = (void *)(bestMatch->n_value + imageVMAddrSlide);
-                if (bestMatch->n_desc == 16) {
-                    // This image has been stripped. The name is meaningless, and
-                    // almost certainly resolves to "_mh_execute_header"
-                    info->dli_sname = NULL;
-                } else {
-                    info->dli_sname = (char *)((intptr_t)stringTable + (intptr_t)bestMatch->n_un.n_strx);
-                    if (*info->dli_sname == '_') {
-                        info->dli_sname++;
-                    }
-                }
-                break;
-            }
-        }
-        cmdPtr += loadCmd->cmdsize;
-    }
-
-    return true;
 }
 
 static bool isValidCrashInfoMessage(const char *str)
@@ -530,7 +372,7 @@ bool ksdl_getBinaryImageForHeader(const struct mach_header *header, intptr_t sli
 {
     // Early exit conditions; this is not a valid/useful binary image
     // 1. We can't find a sensible Mach command
-    uintptr_t cmdPtr = firstCmdAfterHeader(header);
+    uintptr_t cmdPtr = ksdl_first_cmd_after_header(header);
     if (cmdPtr == 0) {
         return false;
     }
