@@ -88,6 +88,15 @@ char *kscrs_readReport(int64_t reportID, const KSCrashReportStoreCConfiguration 
  */
 char *kscrs_readReportAtPath(const char *path);
 
+/** Get a path for given report ID.
+ *
+ * @param reportID The report's ID.
+ * @param path Path to report to fill in.
+ * @param configuration The store configuretion (e.g. reports path, app name etc).
+ *
+ */
+void kscrs_getReportPathForID(int64_t reportID, char *path, const KSCrashReportStoreCConfiguration *const configuration);
+
 /** Add a custom report to the store.
  *
  * @param report The report's contents (must be JSON encoded).
