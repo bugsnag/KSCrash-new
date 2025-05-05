@@ -179,6 +179,14 @@
     return [KSCrashReportDictionary reportWithValue:crashReport];
 }
 
+- (NSString *)crashReportPathForID:(int64_t)reportID
+{
+    char pathName[KSCRS_MAX_PATH_LENGTH];
+    kscrs_getReportPathForID(reportID, pathName, &_cConfig);
+    NSString *pathString = [NSString stringWithUTF8String:pathName];
+    return pathString;
+}
+
 - (NSArray<KSCrashReportDictionary *> *)allReports
 {
     int reportCount = kscrs_getReportCount(&_cConfig);

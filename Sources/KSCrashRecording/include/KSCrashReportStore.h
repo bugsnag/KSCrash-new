@@ -120,6 +120,14 @@ NS_SWIFT_NAME(CrashReportStore)
  */
 - (nullable KSCrashReportDictionary *)reportForID:(int64_t)reportID NS_SWIFT_NAME(report(for:));
 
+/** Get report file path for specified ID.
+ *
+ * @param reportID An ID of report.
+ *
+ * @return Crash report file path.
+ */
+- (NSString *)crashReportPathForID:(int64_t)reportID;
+
 /** Delete all unsent reports.
  */
 - (void)deleteAllReports;
