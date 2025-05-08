@@ -201,6 +201,7 @@ typedef struct KSCrash_MonitorContext {
         const char *appID;
         const char *cpuArchitecture;
         const char *binaryArchitecture;
+        const char *iosSupportVersion;
         int cpuType;
         int cpuSubType;
         int binaryCPUType;

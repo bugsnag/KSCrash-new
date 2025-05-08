@@ -63,6 +63,7 @@ typedef struct {
     const char *appID;
     const char *cpuArchitecture;
     const char *binaryArchitecture;
+    const char *iosSupportVersion;
     int cpuType;
     int cpuSubType;
     int binaryCPUType;
@@ -433,6 +434,119 @@ static const char *getBuildType(void)
     return "unknown";
 }
 
+/**
+ * Returns the content of /System/Library/CoreServices/SystemVersion.plist
+ * bypassing the open syscall shim that would normally redirect access to this
+ * file for iOS apps running on macOS.
+ *
+ * https://opensource.apple.com/source/xnu/xnu-7195.81.3/libsyscall/wrappers/system-version-compat.c.auto.html
+ */
+#if !TARGET_OS_SIMULATOR
+static NSDictionary * getSystemInfoPlist(void) {
+    int fd = -1;
+    char buffer[1024] = {0};
+    const char *file = "/System/Library/CoreServices/SystemVersion.plist";
+#if KSCRASH_HAS_SYSCALL
+    bsg_syscall_open(file, O_RDONLY, 0, &fd);
+#else
+    fd = open(file, O_RDONLY);
+#endif
+    if (fd < 0) {
+        KSLOG_ERROR(@"Could not open SystemVersion.plist");
+        return nil;
+    }
+    ssize_t length = read(fd, buffer, sizeof(buffer));
+    close(fd);
+    if (length < 0 || length == sizeof(buffer)) {
+        KSLOG_ERROR(@"Could not read SystemVersion.plist");
+        return nil;
+    }
+    NSData *data = [NSData
+                    dataWithBytesNoCopy:buffer
+                    length:(NSUInteger)length freeWhenDone:NO];
+    if (!data) {
+        KSLOG_ERROR(@"Could not read SystemVersion.plist");
+        return nil;
+    }
+    NSError *error = nil;
+    NSDictionary *systemVersion = [NSPropertyListSerialization
+                                   propertyListWithData:data
+                                   options:0 format:NULL error:&error];
+    if (!systemVersion) {
+        KSLOG_ERROR(@"Could not read SystemVersion.plist: %@", error);
+    }
+    return systemVersion;
+}
+#endif
+
+static void initializeSystemNameVersion(void)
+{
+#if TARGET_OS_SIMULATOR
+    //
+    // When running on the simulator, we want to report the name and version of
+    // the simlated OS.
+    //
+#if TARGET_OS_IOS
+    // Note: This does not match UIDevice.currentDevice.systemName for versions
+    // prior to (and some versions of) iOS 9 where the systemName was reported
+    // as "iPhone OS". UIDevice gets its data from MobileGestalt which is a
+    // private API. /System/Library/CoreServices/SystemVersion.plist contains
+    // the information we need but will contain the macOS information when
+    // running on the Simulator.
+    g_systemData.systemName = "iOS";
+#elif TARGET_OS_TV
+    g_systemData.systemName = "tvOS";
+#elif TARGET_OS_WATCH
+    g_systemData.systemName = "watchOS";
+#elif TARGET_OS_VISION
+    g_systemData.systemName = "visionOS";
+#endif // TARGET_OS_IOS
+
+    g_systemData.systemVersion = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_RUNTIME_VERSION"]);
+    g_systemData.machine = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_MODEL_IDENTIFIER"]);
+    g_systemData.model = "simulator";
+
+#else // !TARGET_OS_SIMULATOR
+    //
+    // Report the name and version of the underlying OS the app is running on.
+    // For Mac Catalyst and iOS apps running on macOS, this means macOS rather
+    // than the version of iOS it emulates ("iOSSupportVersion")
+    //
+    NSDictionary *sysVersion = getSystemInfoPlist();
+
+#if TARGET_OS_IOS || TARGET_OS_OSX
+    NSString *systemName = sysVersion[@"ProductName"];
+    if ([systemName isEqual:@"iPhone OS"]) {
+        g_systemData.systemName = "iOS";
+    } else if
+        // "ProductName" changed from "Mac OS X" to "macOS" in 11.0
+        ([systemName isEqual:@"macOS"] || [systemName isEqual:@"Mac OS X"]) {
+        g_systemData.systemName = "macOS";
+    }
+#elif TARGET_OS_TV
+    g_systemData.systemName = "tvOS";
+#elif TARGET_OS_WATCH
+    g_systemData.systemName = "watchOS";
+#elif TARGET_OS_VISION
+    g_systemData.systemName = "visionOS";
+#endif
+
+    g_systemData.systemVersion = sysVersion[@"ProductVersion"];
+
+#if TARGET_OS_IOS
+    g_systemData.iosSupportVersion = sysVersion[@"iOSSupportVersion"];
+#endif
+
+#if KSCRASH_HOST_MAC
+    // MacOS has the machine in the model field, and no model
+    g_systemData.machine = stringSysctl("hw.model");
+#else
+    g_systemData.machine = stringSysctl("hw.machine");
+    g_systemData.model = stringSysctl("hw.model");
+#endif
+#endif // TARGET_OS_SIMULATOR
+}
+
 // ============================================================================
 #pragma mark - API -
 // ============================================================================
@@ -447,40 +561,7 @@ static void initialize(void)
         NSDictionary *infoDict = [mainBundle infoDictionary];
         const struct mach_header *header = _dyld_get_image_header(0);
 
-#if KSCRASH_HAS_UIDEVICE
-        g_systemData.systemName = cString([UIDevice currentDevice].systemName);
-        g_systemData.systemVersion = cString([UIDevice currentDevice].systemVersion);
-#else
-#if KSCRASH_HOST_MAC
-        g_systemData.systemName = "macOS";
-#endif
-#if KSCRASH_HOST_WATCH
-        g_systemData.systemName = "watchOS";
-#endif
-        NSOperatingSystemVersion version = [NSProcessInfo processInfo].operatingSystemVersion;
-        ;
-        NSString *systemVersion;
-        if (version.patchVersion == 0) {
-            systemVersion = [NSString stringWithFormat:@"%d.%d", (int)version.majorVersion, (int)version.minorVersion];
-        } else {
-            systemVersion = [NSString stringWithFormat:@"%d.%d.%d", (int)version.majorVersion,
-                                                       (int)version.minorVersion, (int)version.patchVersion];
-        }
-        g_systemData.systemVersion = cString(systemVersion);
-#endif
-        if (isSimulatorBuild()) {
-            g_systemData.machine = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_MODEL_IDENTIFIER"]);
-            g_systemData.model = "simulator";
-            g_systemData.systemVersion = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_RUNTIME_VERSION"]);
-        } else {
-#if KSCRASH_HOST_MAC
-            // MacOS has the machine in the model field, and no model
-            g_systemData.machine = stringSysctl("hw.model");
-#else
-            g_systemData.machine = stringSysctl("hw.machine");
-            g_systemData.model = stringSysctl("hw.model");
-#endif
-        }
+        initializeSystemNameVersion();
 
         g_systemData.kernelVersion = stringSysctl("kern.version");
         g_systemData.osVersion = stringSysctl("kern.osversion");
@@ -548,6 +629,7 @@ static void addContextualInfoToEvent(KSCrash_MonitorContext *eventContext)
         COPY_REFERENCE(appID);
         COPY_REFERENCE(cpuArchitecture);
         COPY_REFERENCE(binaryArchitecture);
+        COPY_REFERENCE(iosSupportVersion);
         COPY_REFERENCE(cpuType);
         COPY_REFERENCE(cpuSubType);
         COPY_REFERENCE(binaryCPUType);

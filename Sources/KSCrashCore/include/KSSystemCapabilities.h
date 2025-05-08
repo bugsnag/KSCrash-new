@@ -151,4 +151,10 @@
 #define KSCRASH_HAS_REACHABILITY 0
 #endif
 
+#if KSCRASH_HOST_IOS || KSCRASH_HOST_TV
+#define KSCRASH_HAS_SYSCALL 1
+#else
+#define KSCRASH_HAS_SYSCALL 0
+#endif
+
 #endif  // HDR_KSSystemCapabilities_h
