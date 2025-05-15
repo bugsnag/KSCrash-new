@@ -69,7 +69,7 @@ bool ksthread_getThreadName(const KSThread thread, char *const buffer, int bufLe
     // WARNING: This implementation is no longer async-safe!
 
     const pthread_t pthread = pthread_from_mach_thread_np((thread_t)thread);
-    return pthread_getname_np(pthread, buffer, (unsigned)bufLength) == 0;
+    return pthread != 0 && pthread_getname_np(pthread, buffer, (unsigned)bufLength) == 0;
 }
 
 int ksthread_getThreadState(const KSThread thread)
