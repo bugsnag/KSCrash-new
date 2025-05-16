@@ -27,6 +27,7 @@
 #include "KSCrashMonitor_AppState.h"
 
 #include "KSCrashMonitorContext.h"
+#include "KSCrashMonitorContextHelper.h"
 #include "KSFileUtils.h"
 #include "KSJSONCodec.h"
 
@@ -333,7 +334,7 @@ bool kscrashstate_reset(void)
         // Simulate first transition to foreground
         g_state.launchesSinceLastCrash++;
         g_state.sessionsSinceLastCrash++;
-        g_state.applicationIsInForeground = true;
+        g_state.applicationIsInForeground = ksmc_isInForeground();
 
         return saveState(g_stateFilePath);
     }

@@ -48,6 +48,10 @@
 #if KSCRASH_HAS_UIKIT
 #import <UIKit/UIKit.h>
 #endif
+#if __has_include(<AppKit/AppKit.h>)
+#import <AppKit/AppKit.h>
+#endif
+
 
 // ============================================================================
 #pragma mark - Globals -
@@ -396,6 +400,29 @@ SYNTHESIZE_CRASH_STATE_PROPERTY(BOOL, crashedLastLaunch)
     [nCenter addObserver:self
                 selector:@selector(applicationWillTerminate)
                     name:UIApplicationWillTerminateNotification
+                  object:nil];
+#endif
+#if KSCRASH_HOST_MAC
+    NSNotificationCenter *nCenter = [NSNotificationCenter defaultCenter];
+    [nCenter addObserver:self
+                selector:@selector(applicationDidBecomeActive)
+                    name:NSApplicationDidBecomeActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillResignActive)
+                    name:NSApplicationWillResignActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationDidEnterBackground)
+                    name:NSApplicationDidResignActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillEnterForeground)
+                    name:NSApplicationWillBecomeActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillTerminate)
+                    name:NSApplicationWillTerminateNotification
                   object:nil];
 #endif
 #if KSCRASH_HAS_NSEXTENSION

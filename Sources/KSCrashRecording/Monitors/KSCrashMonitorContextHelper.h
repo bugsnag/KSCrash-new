@@ -43,6 +43,10 @@ static void inline ksmc_fillMonitorContext(KSCrash_MonitorContext *monitorContex
     }
 }
 
+/** Check if the application is in foreground.
+ */
+bool ksmc_isInForeground(void);
+
 #ifdef __cplusplus
 }
 #endif
