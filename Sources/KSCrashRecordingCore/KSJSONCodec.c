@@ -737,53 +737,53 @@ static int writeUTF8(unsigned int character, char **dst)
     return KSJSON_ERROR_INVALID_CHARACTER;
 }
 
-static int noOpFloatHandler(const char *const name, const double value, void *const userData)
+static int invalidArgFloatHandler(const char *const name, const double value, void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpIntHandler(const char *const name, const int64_t value, void *const userData)
+static int invalidArgIntHandler(const char *const name, const int64_t value, void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpUIntHandler(const char *const name, const uint64_t value, void *const userData)
+static int invalidArgUIntHandler(const char *const name, const uint64_t value, void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpNameDataHandler(const char *const name, __unused void *const userData)
+static int invalidArgNameDataHandler(const char *const name, __unused void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpDataHandler(__unused void *const userData)
+static int invalidArgDataHandler(__unused void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpBooleanHandler(const char *const name, const bool value, void *const userData)
+static int invalidArgBooleanHandler(const char *const name, const bool value, void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static int noOpStringHandler(const char *name, const char * value, void *const userData)
+static int invalidArgStringHandler(const char *name, const char * value, void *const userData)
 {
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
 static KSJSONDecodeCallbacks createSafeCallbacks(const KSJSONDecodeCallbacks *const callbacks) {
     KSJSONDecodeCallbacks result = {
-        .onBeginArray = callbacks->onBeginArray != NULL ? callbacks->onBeginArray : noOpNameDataHandler,
-        .onBeginObject = callbacks->onBeginObject != NULL ? callbacks->onBeginObject : noOpNameDataHandler,
-        .onBooleanElement = callbacks->onBooleanElement != NULL ? callbacks->onBooleanElement : noOpBooleanHandler,
-        .onEndContainer = callbacks->onEndContainer != NULL ? callbacks->onEndContainer : noOpDataHandler,
-        .onEndData = callbacks->onEndData != NULL ? callbacks->onEndData : noOpDataHandler,
-        .onFloatingPointElement = callbacks->onFloatingPointElement != NULL ? callbacks->onFloatingPointElement : noOpFloatHandler,
-        .onIntegerElement = callbacks->onIntegerElement != NULL ? callbacks->onIntegerElement : noOpIntHandler,
-        .onUnsignedIntegerElement = callbacks->onUnsignedIntegerElement != NULL ? callbacks->onUnsignedIntegerElement : noOpUIntHandler,
-        .onNullElement = callbacks->onNullElement != NULL ? callbacks->onNullElement : noOpNameDataHandler,
-        .onStringElement = callbacks->onStringElement != NULL ? callbacks->onStringElement : noOpStringHandler,
+        .onBeginArray = callbacks->onBeginArray != NULL ? callbacks->onBeginArray : invalidArgNameDataHandler,
+        .onBeginObject = callbacks->onBeginObject != NULL ? callbacks->onBeginObject : invalidArgNameDataHandler,
+        .onBooleanElement = callbacks->onBooleanElement != NULL ? callbacks->onBooleanElement : invalidArgBooleanHandler,
+        .onEndContainer = callbacks->onEndContainer != NULL ? callbacks->onEndContainer : invalidArgDataHandler,
+        .onEndData = callbacks->onEndData != NULL ? callbacks->onEndData : invalidArgDataHandler,
+        .onFloatingPointElement = callbacks->onFloatingPointElement != NULL ? callbacks->onFloatingPointElement : invalidArgFloatHandler,
+        .onIntegerElement = callbacks->onIntegerElement != NULL ? callbacks->onIntegerElement : invalidArgIntHandler,
+        .onUnsignedIntegerElement = callbacks->onUnsignedIntegerElement != NULL ? callbacks->onUnsignedIntegerElement : invalidArgUIntHandler,
+        .onNullElement = callbacks->onNullElement != NULL ? callbacks->onNullElement : invalidArgNameDataHandler,
+        .onStringElement = callbacks->onStringElement != NULL ? callbacks->onStringElement : invalidArgStringHandler,
     };
     return result;
 }
