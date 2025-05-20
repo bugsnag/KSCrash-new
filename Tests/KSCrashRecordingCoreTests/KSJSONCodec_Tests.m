@@ -1241,6 +1241,11 @@ static int addJSONData(const char *data, int length, void *userData)
     return KSJSON_OK;
 }
 
+static int addJSONDataNoOp(const char *data, int length, void *userData)
+{
+    return KSJSON_OK;
+}
+
 - (void)serializeObject:(id)object toFile:(NSString *)filename
 {
     NSError *error = nil;
@@ -1531,6 +1536,435 @@ static int addJSONData(const char *data, int length, void *userData)
     } else {
         XCTAssertEqualWithAccuracy([decodedArray[0] doubleValue], value, DBL_EPSILON * fabs(value) * 100);
     }
+}
+
+- (void)testCodecObjcCEncodeIsNullSafe {
+    XCTAssertNil([KSJSONCodec encode:nil options:0 error:nil]);
+}
+
+- (void)testCodecObjcCDecodeIsNullSafe {
+    XCTAssertNil([KSJSONCodec decode:nil options:0 error:nil]);
+}
+
+- (void)testCodecCBeginEncodeIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    
+    // Test that the following won't cause a crash
+    ksjson_beginEncode(NULL, false, addJSONData, &userData);
+    ksjson_beginEncode(&context, false, NULL, &userData);
+    ksjson_beginEncode(&context, false, addJSONData, NULL);
+}
+
+- (void)testCodecCEndEncodeIsNullSafe {
+    XCTAssertEqual(ksjson_endEncode(NULL), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCAddBooleanElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addBooleanElement(NULL, name, true), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addBooleanElement(&context, NULL, true), KSJSON_OK);
+}
+
+- (void)testCodecCAddIntegerElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addIntegerElement(NULL, name, 1), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addIntegerElement(&context, NULL, 1), KSJSON_OK);
+}
+
+- (void)testCodecCAddUIntegerElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addUIntegerElement(NULL, name, 1), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addUIntegerElement(&context, NULL, 1), KSJSON_OK);
+}
+
+- (void)testCodecCAddFloatingPointElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addFloatingPointElement(NULL, name, 1.0), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addFloatingPointElement(&context, NULL, 1.0), KSJSON_OK);
+}
+
+- (void)testCodecCAddNullElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addNullElement(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addNullElement(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCAddStringElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addStringElement(NULL, name, value, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addStringElement(&context, NULL, value, 9), KSJSON_OK);
+    XCTAssertEqual(ksjson_addStringElement(&context, name, NULL, 9), KSJSON_OK);
+}
+
+- (void)testCodecCBeginStringElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_beginStringElement(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_beginStringElement(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCAppendStringElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_appendStringElement(NULL, value, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_appendStringElement(&context, NULL, 0), KSJSON_OK);
+    XCTAssertEqual(ksjson_appendStringElement(&context, NULL, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCEndStringElementIsNullSafe {
+    KSJSONEncodeContext context;
+    
+    XCTAssertEqual(ksjson_endStringElement(NULL), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCAddDataElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addDataElement(NULL, name, value, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addDataElement(&context, NULL, value, 9), KSJSON_OK);
+    XCTAssertEqual(ksjson_addDataElement(&context, name, NULL, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCBeginDataElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_beginDataElement(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_beginDataElement(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCAppendDataElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_appendDataElement(NULL, value, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_appendDataElement(&context, NULL, 0), KSJSON_OK);
+    XCTAssertEqual(ksjson_appendDataElement(&context, NULL, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCEndDataElementIsNullSafe {
+    KSJSONEncodeContext context;
+    
+    XCTAssertEqual(ksjson_endDataElement(NULL), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCAddJSONElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addJSONElement(NULL, name, value, 9, true), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addJSONElement(&context, NULL, value, 9, true), KSJSON_ERROR_INVALID_CHARACTER);
+    XCTAssertEqual(ksjson_addJSONElement(&context, name, NULL, 9, true), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCBeginObjectIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_beginObject(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_beginObject(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCBeginArrayIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_beginArray(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_beginArray(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCBeginElementIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_beginElement(NULL, name), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_beginElement(&context, NULL), KSJSON_OK);
+}
+
+- (void)testCodecCAddRawJSONDataIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *value = "TestName";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addRawJSONData(NULL, value, 9), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addRawJSONData(&context, NULL, 9), KSJSON_OK);
+}
+
+- (void)testCodecCEndDataContainerIsNullSafe {
+    KSJSONEncodeContext context;
+    
+    XCTAssertEqual(ksjson_endContainer(NULL), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCAddJSONFromFileIsNullSafe {
+    KSJSONEncodeContext context;
+    char userData[1000];
+    char *name = "TestName";
+    char *value = "TestValue";
+    
+    ksjson_beginEncode(&context, false, addJSONDataNoOp, &userData);
+    XCTAssertEqual(ksjson_addJSONFromFile(NULL, name, value, true), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_addJSONFromFile(&context, NULL, value, true), KSJSON_ERROR_INVALID_CHARACTER);
+    XCTAssertEqual(ksjson_addJSONFromFile(&context, name, NULL, true), KSJSON_ERROR_INVALID_CHARACTER);
+}
+
+static int noOpFloatHandler(const char *const name, const double value, void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpIntHandler(const char *const name, const int64_t value, void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpUIntHandler(const char *const name, const uint64_t value, void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpNameDataHandler(const char *const name, __unused void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpDataHandler(__unused void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpBooleanHandler(const char *const name, const bool value, void *const userData)
+{
+    return KSJSON_OK;
+}
+
+static int noOpStringHandler(const char *name, const char * value, void *const userData)
+{
+    return KSJSON_OK;
+}
+
+- (void)testCodecCDecodeIsArgumentsNullSafe {
+    KSJSONDecodeCallbacks callbacks = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+    
+    char *jsonData = "{\"a\":\"1\", \"b\":[], \"c\": 1, \"d\": true, \"e\": 1.0, \"f\": null, \"i\": 18446744073709551615}";
+    char buffer[1000];
+    char userData[1000];
+    int errorOffset;
+    XCTAssertEqual(ksjson_decode(NULL, 84, buffer, 1000, &callbacks, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_decode(jsonData, 84, NULL, 1000, &callbacks, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, NULL, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+}
+
+- (void)testCodecCDecodeIsCallbacksIsNullSafe {
+    char *jsonData = "{\"a\":\"1\", \"b\":[], \"c\": 1, \"d\": true, \"e\": 1.0, \"f\": null, \"i\": 18446744073709551615}";
+    char buffer[1000];
+    char userData[1000];
+    int errorOffset;
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnBeginArray = {
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnBeginArray, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnBeginObject = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnBeginObject, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnBooleanElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnBooleanElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnEndContainer = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnEndContainer, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnEndData = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnEndData, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnFloatingPointElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnFloatingPointElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnIntegerElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnIntegerElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnUnsignedIntegerElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onNullElement = noOpNameDataHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnUnsignedIntegerElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnNullElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onStringElement = noOpStringHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnNullElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks callbacksWithoutOnStringElement = {
+        .onBeginArray = noOpNameDataHandler,
+        .onBeginObject = noOpNameDataHandler,
+        .onBooleanElement = noOpBooleanHandler,
+        .onEndContainer = noOpDataHandler,
+        .onEndData = noOpDataHandler,
+        .onFloatingPointElement = noOpFloatHandler,
+        .onIntegerElement = noOpIntHandler,
+        .onUnsignedIntegerElement = noOpUIntHandler,
+        .onNullElement = noOpNameDataHandler,
+    };
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &callbacksWithoutOnStringElement, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
+    
+    KSJSONDecodeCallbacks noCallbacks;
+
+    XCTAssertEqual(ksjson_decode(jsonData, 84, buffer, 1000, &noCallbacks, userData, &errorOffset), KSJSON_ERROR_INVALID_ARGUMENT);
 }
 
 @end
