@@ -31,6 +31,7 @@
 #import "KSCrashMonitorContextHelper.h"
 #import "KSID.h"
 #import "KSStackCursor_MachineContext.h"
+#import "KSCrashMonitor_AppState.h"
 #import "KSThread.h"
 
 // #define KSLogger_LocalLevel TRACE
@@ -145,7 +146,13 @@ static NSTimeInterval g_watchdogInterval = 0;
             cancelled = self.monitorThread.isCancelled;
             if (!cancelled && runWatchdogCheck) {
                 if (self.awaitingResponse) {
-                    [self handleDeadlock];
+                    // Check if app is in foreground
+                    if (!kscrashstate_currentState()->applicationIsInForeground) {
+                        KSLOG_INFO("Ignoring app hang because app is in the background");
+                        [self watchdogPulse];
+                    } else {
+                        [self handleDeadlock];
+                    }
                 } else {
                     [self watchdogPulse];
                 }
