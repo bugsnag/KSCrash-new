@@ -67,15 +67,17 @@
 #define likely_if(x) if (__builtin_expect(x, 1))
 #define unlikely_if(x) if (__builtin_expect(x, 0))
 
-#define ReturnInvalidArgumentIfNull(x) unlikely_if((x) == NULL) { \
-KSLOG_DEBUG("Invalid argument - " #x " is null"); \
-return KSJSON_ERROR_INVALID_ARGUMENT; \
-}
+#define ReturnInvalidArgumentIfNull(x)                                         \
+  unlikely_if((x) == NULL) {                                                   \
+    KSLOG_DEBUG("Invalid argument - " #x " is null");                          \
+    return KSJSON_ERROR_INVALID_ARGUMENT;                                      \
+  }
 
-#define ReturnIfNull(x) unlikely_if((x) == NULL) { \
-KSLOG_DEBUG("Invalid argument - " #x " is null"); \
-return; \
-}
+#define ReturnIfNull(x)                                                        \
+  unlikely_if((x) == NULL) {                                                   \
+    KSLOG_DEBUG("Invalid argument - " #x " is null");                          \
+    return;                                                                    \
+  }
 
 /** Used for writing hex string values. */
 static char g_hexNybbles[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
