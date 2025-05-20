@@ -772,7 +772,7 @@ static int noOpStringHandler(const char *name, const char * value, void *const u
     return KSJSON_ERROR_INVALID_ARGUMENT;
 }
 
-static KSJSONDecodeCallbacks createSafeCallbacks(KSJSONDecodeCallbacks *callbacks) {
+static KSJSONDecodeCallbacks createSafeCallbacks(const KSJSONDecodeCallbacks *const callbacks) {
     KSJSONDecodeCallbacks result = {
         .onBeginArray = callbacks->onBeginArray != NULL ? callbacks->onBeginArray : noOpNameDataHandler,
         .onBeginObject = callbacks->onBeginObject != NULL ? callbacks->onBeginObject : noOpNameDataHandler,
