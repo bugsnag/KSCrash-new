@@ -32,6 +32,7 @@
 #import "KSDynamicLinker.h"
 #import "KSSysCtl.h"
 #import "KSSystemCapabilities.h"
+#import "KSJailbreak.h"
 
 // #define KSLogger_LocalLevel TRACE
 #import "KSLogger.h"
@@ -289,7 +290,21 @@ static const char *getCurrentCPUArch(void)
  *
  * @return YES if the device is jailbroken.
  */
-static bool isJailbroken(void) { return ksdl_imageNamed("MobileSubstrate", false) != NULL; }
+static inline bool isJailbroken(void) {
+    static bool initialized_jb;
+    static bool is_jb;
+    if(!initialized_jb) {
+        get_jailbreak_status(&is_jb);
+
+        // Also keep using the old detection method.
+        if(ksdl_imageNamed("MobileSubstrate", false) != NULL) {
+            is_jb = true;
+        }
+        initialized_jb = true;
+    }
+
+    return is_jb;
+}
 
 /** Check if the app is started using Rosetta translation environment
  *
