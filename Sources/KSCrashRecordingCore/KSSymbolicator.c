@@ -253,7 +253,12 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
         }
     }
 
-    cursor->stackEntry.imageAddress = image->vmAddress;
+    if (image->vmAddress == 0) {
+        cursor->stackEntry.imageAddress = (uintptr_t)image->header;
+    } else {
+        cursor->stackEntry.imageAddress = image->vmAddress;
+    }
+
     cursor->stackEntry.imageName = image->name;
 
     return true;
