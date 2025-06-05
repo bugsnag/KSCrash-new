@@ -218,6 +218,7 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
     COPY_STRING(appID);
     COPY_STRING(cpuArchitecture);
     COPY_STRING(binaryArchitecture);
+    COPY_STRING(clangVersion);
     COPY_PRIMITIVE(cpuType);
     COPY_PRIMITIVE(cpuSubType);
     COPY_PRIMITIVE(binaryCPUType);
