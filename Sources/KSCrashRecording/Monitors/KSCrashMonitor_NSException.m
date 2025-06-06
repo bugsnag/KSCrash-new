@@ -117,7 +117,6 @@ static KS_NOINLINE void handleException(NSException *exception, BOOL isUserRepor
 
         NS_VALID_UNTIL_END_OF_SCOPE NSString *userInfoString =
             exception.userInfo != nil ? [NSString stringWithFormat:@"%@", exception.userInfo] : nil;
-        NSLog(@"DARIA_LOG USER INFO RAW: %@, USER INFO PROCESSED STRING: %@", exception.userInfo, userInfoString);
 
         KSCrash_MonitorContext *crashContext = &g_monitorContext;
         memset(crashContext, 0, sizeof(*crashContext));
