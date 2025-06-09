@@ -64,6 +64,7 @@ typedef struct {
     const char *appID;
     const char *cpuArchitecture;
     const char *binaryArchitecture;
+    const char *clangVersion;
     int cpuType;
     int cpuSubType;
     int binaryCPUType;
@@ -524,6 +525,10 @@ static void initialize(void)
 
         const char* binaryArch = getCPUArchForCPUType(header->cputype, header->cpusubtype);
         g_systemData.binaryArchitecture = binaryArch == NULL ? "" : binaryArch;
+
+#ifdef __clang_version__
+        g_systemData.clangVersion = __clang_version__;
+#endif
     }
 }
 
@@ -563,6 +568,7 @@ static void addContextualInfoToEvent(KSCrash_MonitorContext *eventContext)
         COPY_REFERENCE(appID);
         COPY_REFERENCE(cpuArchitecture);
         COPY_REFERENCE(binaryArchitecture);
+        COPY_REFERENCE(clangVersion);
         COPY_REFERENCE(cpuType);
         COPY_REFERENCE(cpuSubType);
         COPY_REFERENCE(binaryCPUType);
