@@ -215,11 +215,11 @@ void i_kslog_logCBasic(const char *fmt, ...);
 #define TRACE KSLogger_Level_Trace
 
 #ifndef KSLogger_Level
-#define KSLogger_Level KSLogger_Level_Error
+#define KSLogger_Level KSLogger_Level_Debug
 #endif
 
 #ifndef KSLogger_LocalLevel
-#define KSLogger_LocalLevel KSLogger_Level_None
+#define KSLogger_LocalLevel KSLogger_Level_Debug
 #endif
 
 #define a_KSLOG_FULL(LEVEL, FMT, ...) i_KSLOG_FULL(LEVEL, __FILE__, __LINE__, __PRETTY_FUNCTION__, FMT, ##__VA_ARGS__)

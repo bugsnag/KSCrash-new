@@ -148,7 +148,7 @@ static NSTimeInterval g_watchdogInterval = 0;
                 if (self.awaitingResponse) {
                     // Check if app is in foreground
                     if (!kscrashstate_currentState()->applicationIsInForeground) {
-                        KSLOG_INFO("Ignoring app hang because app is in the background");
+                        KSLOG_INFO(@"Ignoring app hang because app is in the background");
                         [self watchdogPulse];
                     } else {
                         [self handleDeadlock];
