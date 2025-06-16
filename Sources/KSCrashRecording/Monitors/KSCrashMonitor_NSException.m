@@ -52,6 +52,45 @@ static KSCrash_MonitorContext g_monitorContext;
 static NSUncaughtExceptionHandler *g_previousUncaughtExceptionHandler;
 
 // ============================================================================
+#pragma mark - Helpers -
+// ============================================================================
+
+BOOL jsonDictionaryIsValid(NSDictionary *obj, NSError **error) {
+    @try {
+        if (![obj isKindOfClass:[NSDictionary class]] || ![NSJSONSerialization isValidJSONObject:(id _Nonnull)obj]) {
+            return NO;
+        }
+        return YES;
+    } @catch (NSException *exception) {
+        return NO;
+    }
+}
+
+NSDictionary * prepareUserInfoDictionary(NSDictionary *dictionary) {
+    if (!dictionary) {
+        return nil;
+    }
+    if (jsonDictionaryIsValid(dictionary, nil)) {
+        return dictionary;
+    }
+    NSMutableDictionary *json = [NSMutableDictionary dictionary];
+    for (id key in dictionary) {
+        if (![key isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        const id value = dictionary[key];
+        if (jsonDictionaryIsValid(@{key: value}, nil)) {
+            json[key] = value;
+        } else if ([value isKindOfClass:[NSDictionary class]]) {
+            json[key] = prepareUserInfoDictionary(value);
+        } else {
+            json[key] = ((NSObject *)value).description;
+        }
+    }
+    return json;
+}
+
+// ============================================================================
 #pragma mark - Callbacks -
 // ============================================================================
 
@@ -117,6 +156,19 @@ static KS_NOINLINE void handleException(NSException *exception, BOOL isUserRepor
 
         NS_VALID_UNTIL_END_OF_SCOPE NSString *userInfoString =
             exception.userInfo != nil ? [NSString stringWithFormat:@"%@", exception.userInfo] : nil;
+
+        // If possible, convert to JSON string
+        if (exception.userInfo != nil)
+        {
+            NSError *error = nil;
+            NSDictionary *userInfoDict = prepareUserInfoDictionary(exception.userInfo);
+            @try {
+                NSData *userInfoData = [NSJSONSerialization dataWithJSONObject:userInfoDict options:0 error:&error];
+                if (error == nil && userInfoData != nil) {
+                    userInfoString = [[NSString alloc] initWithData:userInfoData encoding:NSUTF8StringEncoding];
+                }
+            } @catch (NSException *exception) {}
+        }
 
         KSCrash_MonitorContext *crashContext = &g_monitorContext;
         memset(crashContext, 0, sizeof(*crashContext));
