@@ -92,7 +92,9 @@ static int leb128_uintptr_decode(struct leb128_uintptr_context *context, uint8_t
 __attribute__((annotate("oclint:suppress[deep nested block]")))
 #endif
 bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
-    KSBinaryImage *image = ksdl_image_at_address(cursor->stackEntry.address);
+    uintptr_t instructionAddress = CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
+
+    KSBinaryImage *image = ksdl_image_at_address(instructionAddress);
     if (!image || !image->header) {
         return false;
     }
@@ -130,9 +132,9 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
                         if (strncmp(section->sectname, SECT_TEXT, sizeof(section->sectname)) == 0) {
                             uintptr_t start = section->addr + slide;
                             uintptr_t end = start + section->size;
-                            if (cursor->stackEntry.address < start || cursor->stackEntry.address >= end) {
+                            if (instructionAddress < start || instructionAddress >= end) {
                                 KSLOG_ERROR("Address %p is outside the " SECT_TEXT " section of image %s",
-                                                (void *)cursor->stackEntry.address, image->name);
+                                                (void *)instructionAddress, image->name);
                                 return false;
                             }
                             break;
@@ -200,7 +202,7 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
                     next_func_start &= ~THUMB_INSTRUCTION_TAG;
                 }
 #endif
-                if (cursor->stackEntry.address < next_func_start) {
+                if (instructionAddress < next_func_start) {
                     // address was in the previous function
                     break;
                 }
@@ -253,12 +255,7 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
         }
     }
 
-    if (image->vmAddress == 0) {
-        cursor->stackEntry.imageAddress = (uintptr_t)image->header;
-    } else {
-        cursor->stackEntry.imageAddress = image->vmAddress;
-    }
-
+    cursor->stackEntry.imageAddress = (uintptr_t)image->header;
     cursor->stackEntry.imageName = image->name;
 
     return true;
