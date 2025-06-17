@@ -210,7 +210,11 @@ typedef enum { CPUFamilyUnknown, CPUFamilyArm, CPUFamilyX86, CPUFamilyX86_64 } C
 - (NSString *)mainExecutableNameForReport:(NSDictionary *)report
 {
     NSDictionary *info = [self infoReport:report];
-    return [info objectForKey:KSCrashField_ProcessName];
+    id result = [info objectForKey:KSCrashField_ProcessName];
+    if (![result isKindOfClass:[NSString class]]) {
+        return nil;
+    }
+    return nil;
 }
 
 - (NSDictionary *)crashedThreadReport:(NSDictionary *)report
@@ -245,12 +249,14 @@ typedef enum { CPUFamilyUnknown, CPUFamilyArm, CPUFamilyX86, CPUFamilyX86_64 } C
 - (NSDictionary *)lastInAppStackEntry:(NSDictionary *)report
 {
     NSString *executableName = [self mainExecutableNameForReport:report];
-    NSDictionary *crashedThread = [self crashedThreadReport:report];
-    NSArray *backtrace = [self backtraceFromThreadReport:crashedThread];
-    for (NSDictionary *entry in backtrace) {
-        NSString *objectName = [entry objectForKey:KSCrashField_ObjectName];
-        if ([objectName isEqualToString:executableName]) {
-            return entry;
+    if (executableName) {
+        NSDictionary *crashedThread = [self crashedThreadReport:report];
+        NSArray *backtrace = [self backtraceFromThreadReport:crashedThread];
+        for (NSDictionary *entry in backtrace) {
+            NSString *objectName = [entry objectForKey:KSCrashField_ObjectName];
+            if ([objectName isEqualToString:executableName]) {
+                return entry;
+            }
         }
     }
     return nil;
