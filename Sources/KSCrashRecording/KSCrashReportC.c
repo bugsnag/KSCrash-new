@@ -1392,6 +1392,7 @@ static void writeProcessState(const KSCrashReportWriter *const writer, const cha
 static void writeReportInfo(const KSCrashReportWriter *const writer, const char *const key, const char *const type,
                             const char *const reportID, const char *const processName)
 {
+    // TODO: This nesting is causing a crash when diagnosing a recrash report. I'm not sure why
     writer->beginObject(writer, key);
     {
         writer->addStringElement(writer, KSCrashField_Version, KSCRASH_REPORT_VERSION);
