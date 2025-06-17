@@ -92,7 +92,9 @@ static int leb128_uintptr_decode(struct leb128_uintptr_context *context, uint8_t
 __attribute__((annotate("oclint:suppress[deep nested block]")))
 #endif
 bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
-    uintptr_t instructionAddress = CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
+    uintptr_t instructionAddress = cursor->state.currentDepth == 1
+                                    ? cursor->stackEntry.address
+                                    : CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
 
     KSBinaryImage *image = ksdl_image_at_address(instructionAddress);
     if (!image || !image->header) {
