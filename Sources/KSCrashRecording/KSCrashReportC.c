@@ -121,6 +121,7 @@ static pthread_mutex_t g_userInfoMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static KSCrash_IntrospectionRules g_introspectionRules;
 static KSReportWriteCallback g_userSectionWriteCallback;
+static bool g_shouldRecordThreads = true;
 
 #pragma mark Callbacks
 
@@ -1122,11 +1123,14 @@ static void writeAllThreads(const KSCrashReportWriter *const writer, const char 
         for (int i = 0; i < threadCount; i++) {
             KSThread thread = ksmc_getThreadAtIndex(context, i);
             int threadRunState = ksthread_getThreadState(thread);
-            if (thread == offendingThread) {
-                writeThread(writer, NULL, crash, context, i, writeNotableAddresses, threadRunState);
-            } else {
-                ksmc_getContextForThread(thread, machineContext, false);
-                writeThread(writer, NULL, crash, machineContext, i, writeNotableAddresses, threadRunState);
+
+            if (g_shouldRecordThreads || thread == offendingThread) {
+                if (thread == offendingThread) {
+                    writeThread(writer, NULL, crash, context, i, writeNotableAddresses, threadRunState);
+                } else {
+                    ksmc_getContextForThread(thread, machineContext, false);
+                    writeThread(writer, NULL, crash, machineContext, i, writeNotableAddresses, threadRunState);
+                }
             }
         }
     }
@@ -1141,7 +1145,7 @@ static void writeAllThreads(const KSCrashReportWriter *const writer, const char 
  *
  * @param key The object key, if needed.
  *
- * @param index Which image to write about.
+ * @param img Which image to write about.
  */
 static void writeBinaryImage(const KSCrashReportWriter *const writer, const char *const key, KSBinaryImage *img)
 {
@@ -1716,4 +1720,12 @@ void kscrashreport_setUserSectionWriteCallback(const KSReportWriteCallback userS
 {
     KSLOG_TRACE("Set userSectionWriteCallback to %p", userSectionWriteCallback);
     g_userSectionWriteCallback = userSectionWriteCallback;
+}
+
+void kscrashreport_setThreadTracingEnabled(bool threadTracingEnabled) {
+#if KSCRASH_HAS_THREADS_API
+    g_shouldRecordThreads = threadTracingEnabled;
+#else
+    (void)threadTracingEnabled;
+#endif
 }

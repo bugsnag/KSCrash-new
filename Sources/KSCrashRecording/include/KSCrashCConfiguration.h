@@ -220,6 +220,14 @@ typedef struct {
      * **Default**: false
      */
     bool enableSigTermMonitoring;
+
+    /** If true, enables writing all threads info in the report.
+     *
+     * If false, only the offending thread is going to be written to the report.
+     *
+     * **Default**: true
+     */
+    bool threadTracingEnabled;
 } KSCrashCConfiguration;
 
 static inline KSCrashCConfiguration KSCrashCConfiguration_Default(void)
@@ -238,6 +246,7 @@ static inline KSCrashCConfiguration KSCrashCConfiguration_Default(void)
         .printPreviousLogOnStartup = false,
         .enableSwapCxaThrow = true,
         .enableSigTermMonitoring = false,
+        .threadTracingEnabled = true,
     };
 }
 

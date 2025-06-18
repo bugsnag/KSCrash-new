@@ -79,6 +79,12 @@ void kscrashreport_setDoNotIntrospectClasses(const char **doNotIntrospectClasses
  */
 void kscrashreport_setUserSectionWriteCallback(const KSReportWriteCallback userSectionWriteCallback);
 
+/** Decide if all threads will be written to a report.
+ *
+ * @param threadTracingEnabled true if all threads should be recorded, if false, only the offending thread will be recorded.
+ */
+void kscrashreport_setThreadTracingEnabled(bool threadTracingEnabled);
+
 // ============================================================================
 #pragma mark - Main API -
 // ============================================================================

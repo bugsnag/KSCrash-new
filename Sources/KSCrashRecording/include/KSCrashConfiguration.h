@@ -164,6 +164,14 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property(nonatomic, assign) BOOL enableSigTermMonitoring;
 
+/** If true, enables writing all threads info in the report.
+ *
+ * If false, only the offending thread is going to be written to the report.
+ *
+ * **Default**: true
+ */
+@property(nonatomic, assign) BOOL threadTracingEnabled;
+
 @end
 
 NS_SWIFT_NAME(CrashReportStoreConfiguration)
