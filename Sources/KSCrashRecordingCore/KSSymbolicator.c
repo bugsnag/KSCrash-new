@@ -92,6 +92,7 @@ static int leb128_uintptr_decode(struct leb128_uintptr_context *context, uint8_t
 __attribute__((annotate("oclint:suppress[deep nested block]")))
 #endif
 bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
+    // Cursor at 0 idx is a dummy so we start stack from 1
     uintptr_t instructionAddress = cursor->state.currentDepth == 1
                                     ? cursor->stackEntry.address
                                     : CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
