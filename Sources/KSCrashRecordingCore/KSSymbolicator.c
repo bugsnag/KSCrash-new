@@ -33,7 +33,7 @@
  * On armv7 the least significant bit of the pointer distinguishes
  * between thumb mode (2-byte instructions) and normal mode (4-byte instructions).
  * On arm64 all instructions are 4-bytes wide so the two least significant
- * bytes should always be 0.
+ * bits should always be 0.
  * On x86_64 and i386, instructions are variable length so all bits are
  * signficant.
  */
@@ -92,7 +92,7 @@ static int leb128_uintptr_decode(struct leb128_uintptr_context *context, uint8_t
 __attribute__((annotate("oclint:suppress[deep nested block]")))
 #endif
 bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
-    uintptr_t instructionAddress = cursor->state.currentDepth == 0
+    uintptr_t instructionAddress = cursor->state.currentDepth == 1
                                     ? cursor->stackEntry.address
                                     : CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
 
