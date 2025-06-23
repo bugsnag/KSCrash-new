@@ -144,7 +144,7 @@
 - (instancetype)initWithTitle:(NSString *)title
                       message:(nullable NSString *)message
                     yesAnswer:(NSString *)yesAnswer
-                     noAnswer:(nullable NSString *)noAnswer;
+                     noAnswer:(nullable NSString *)noAnswer
 {
     if ((self = [super init])) {
         _title = [title copy];

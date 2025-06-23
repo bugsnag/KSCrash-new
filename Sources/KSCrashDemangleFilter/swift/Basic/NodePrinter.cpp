@@ -668,7 +668,7 @@ case Node::Kind::Name:
                 return;
             }
             
-            auto getLabelFor = [&](NodePointer Param, unsigned Index) -> std::string {
+            auto getLabelFor = [&](NodePointer Param __unused, unsigned Index) -> std::string {
                 auto Label = LabelList->getChild(Index);
                 assert(Label && (Label->getKind() == Node::Kind::Identifier ||
                                  Label->getKind() == Node::Kind::FirstElementMarker));

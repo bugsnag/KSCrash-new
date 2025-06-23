@@ -3019,7 +3019,7 @@ NodePointer Demangler::demangleGenericType() {
                                          GenSig, Ty));
 }
 
-static int decodeValueWitnessKind(StringRef CodeStr) {
+static int decodeValueWitnessKind(StringRef CodeStr __unused) {
     return -1;
 }
 
