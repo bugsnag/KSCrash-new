@@ -816,6 +816,8 @@ static bool isExistentialType(NodePointer node) {
 /// Print the relevant parameters and return the new index.
 unsigned NodePrinter::printFunctionSigSpecializationParam(NodePointer Node,
                                                           unsigned Idx) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
     NodePointer firstChild = Node->getChild(Idx);
     unsigned long long V = firstChild->getIndex();
     auto K = FunctionSigSpecializationParamKind(V);
@@ -880,7 +882,8 @@ unsigned NodePrinter::printFunctionSigSpecializationParam(NodePointer Node,
         default:
             break;
     }
-    
+#pragma clang diagnostic pop
+
     assert(
            ((V & unsigned(FunctionSigSpecializationParamKind::OwnedToGuaranteed)) ||
             (V & unsigned(FunctionSigSpecializationParamKind::GuaranteedToOwned)) ||
@@ -893,6 +896,8 @@ unsigned NodePrinter::printFunctionSigSpecializationParam(NodePointer Node,
     return Idx;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 void NodePrinter::printSpecializationPrefix(NodePointer node,
                                             StringRef Description,
                                             StringRef ParamPrefix) {
@@ -948,6 +953,7 @@ static bool needSpaceBeforeType(NodePointer Type) {
             return true;
     }
 }
+#pragma clang diagnostic pop
 
 NodePointer NodePrinter::print(NodePointer Node, bool asPrefixContext) {
     switch (Node->getKind()) {
@@ -2223,6 +2229,8 @@ return nullptr;
     printer_unreachable("bad node kind!");
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 NodePointer NodePrinter::printAbstractStorage(NodePointer Node,
                                               bool asPrefixContent,
                                               StringRef ExtraName) {
@@ -2238,6 +2246,7 @@ NodePointer NodePrinter::printAbstractStorage(NodePointer Node,
             printer_unreachable("Not an abstract storage node");
     }
 }
+#pragma clang diagnostic pop
 
 NodePointer NodePrinter::
 printEntity(NodePointer Entity, bool asPrefixContext, TypePrinting TypePr,

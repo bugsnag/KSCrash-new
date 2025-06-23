@@ -85,7 +85,9 @@ namespace swift {
                     if (!Nd || Nd->getKind() != Node::Kind::Global ||
                         Nd->getNumChildren() == 0)
                         return false;
-                    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
                     switch (Nd->getFirstChild()->getKind()) {
                         case Node::Kind::ObjCAttribute:
                         case Node::Kind::NonObjCAttribute:
@@ -99,6 +101,7 @@ namespace swift {
                         default:
                             break;
                     }
+#pragma clang diagnostic pop
                 }
                 return false;
             }
@@ -151,7 +154,9 @@ namespace swift {
             if (!Global || Global->getKind() != Node::Kind::Global ||
                 Global->getNumChildren() == 0)
                 return false;
-            
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
             Node *TopLevel = Global->getFirstChild();
             switch (TopLevel->getKind()) {
                     // Functions, which don't have the swift calling conventions:
@@ -168,6 +173,7 @@ namespace swift {
                 default:
                     break;
             }
+#pragma clang diagnostic pop
             return true;
         }
         

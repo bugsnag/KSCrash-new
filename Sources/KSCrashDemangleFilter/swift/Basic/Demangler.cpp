@@ -29,7 +29,8 @@ using swift::Demangle::FunctionSigSpecializationParamKind;
 //////////////////////////////////
 
 namespace {
-    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
     static bool isDeclName(Node::Kind kind) {
         switch (kind) {
             case Node::Kind::Identifier:
@@ -119,7 +120,7 @@ case Node::Kind::ID:
                 return false;
         }
     }
-    
+#pragma clang diagnostic pop
 } // anonymous namespace
 
 //////////////////////////////////
@@ -189,6 +190,8 @@ llvm::StringRef swift::Demangle::dropSwiftManglingPrefix(StringRef mangledName){
     return mangledName.drop_front(getManglingPrefixLength(mangledName));
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 static bool isAliasNode(Demangle::NodePointer Node) {
     switch (Node->getKind()) {
         case Demangle::Node::Kind::Type:
@@ -272,6 +275,7 @@ static bool isStructNode(Demangle::NodePointer Node) {
     }
     assert(0 && "unknown node kind");
 }
+#pragma clang diagnostic pop
 
 bool swift::Demangle::isStruct(llvm::StringRef mangledName) {
     Demangle::Demangler Dem;
@@ -431,6 +435,9 @@ NodePointer Demangler::demangleSymbol(StringRef MangledName) {
             FuncAttr->getKind() == Node::Kind::PartialApplyObjCForwarder)
             Parent = FuncAttr;
     }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
     for (Node *Nd : NodeStack) {
         switch (Nd->getKind()) {
             case Node::Kind::Type:
@@ -441,6 +448,7 @@ NodePointer Demangler::demangleSymbol(StringRef MangledName) {
                 break;
         }
     }
+#pragma clang diagnostic pop
     if (topLevel->getNumChildren() == 0)
         return nullptr;
     
@@ -1291,6 +1299,8 @@ NodePointer Demangler::popAnyProtocolConformanceList() {
     return conformanceList;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 NodePointer Demangler::popAnyProtocolConformance() {
     return popNode([](Node::Kind kind) {
         switch (kind) {
@@ -1305,6 +1315,7 @@ NodePointer Demangler::popAnyProtocolConformance() {
         }
     });
 }
+#pragma clang diagnostic pop
 
 NodePointer Demangler::demangleRetroactiveProtocolConformanceRef() {
     NodePointer module = popModule();
@@ -1332,6 +1343,8 @@ NodePointer Demangler::demangleConcreteProtocolConformance() {
                               type, conformanceRef, conditionalConformanceList);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 NodePointer Demangler::popDependentProtocolConformance() {
     return popNode([](Node::Kind kind) {
         switch (kind) {
@@ -1345,6 +1358,7 @@ NodePointer Demangler::popDependentProtocolConformance() {
         }
     });
 }
+#pragma clang diagnostic pop
 
 NodePointer Demangler::demangleDependentProtocolConformanceRoot() {
     int index = demangleIndex();
@@ -1464,6 +1478,8 @@ NodePointer Demangler::demangleBoundGenericType() {
     return NTy;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
 bool Demangle::nodeConsumesGenericArgs(Node *node) {
     switch (node->getKind()) {
         case Node::Kind::Variable:
@@ -1477,6 +1493,7 @@ bool Demangle::nodeConsumesGenericArgs(Node *node) {
             return true;
     }
 }
+#pragma clang diagnostic pop
 
 NodePointer Demangler::demangleBoundGenericArgs(NodePointer Nominal,
                                                 const Vector<NodePointer> &TypeLists,
@@ -1554,7 +1571,9 @@ NodePointer Demangler::demangleBoundGenericArgs(NodePointer Nominal,
     // to do.
     if (args->getNumChildren() == 0)
         return Nominal;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
     Node::Kind kind;
     switch (Nominal->getKind()) {
         case Node::Kind::Class:
@@ -1582,6 +1601,7 @@ NodePointer Demangler::demangleBoundGenericArgs(NodePointer Nominal,
         default:
             return nullptr;
     }
+#pragma clang diagnostic pop
     return createWithChildren(kind, createType(Nominal), args);
 }
 
@@ -2212,6 +2232,8 @@ NodePointer Demangler::demangleFunctionSpecialization() {
         assert(KindNd->getKind() ==
                Node::Kind::FunctionSignatureSpecializationParamKind);
         auto ParamKind = (FunctionSigSpecializationParamKind)KindNd->getIndex();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
         switch (ParamKind) {
             case FunctionSigSpecializationParamKind::ConstantPropFunction:
             case FunctionSigSpecializationParamKind::ConstantPropGlobal:
@@ -2241,6 +2263,7 @@ NodePointer Demangler::demangleFunctionSpecialization() {
             default:
                 break;
         }
+#pragma clang diagnostic pop
     }
     return Spec;
 }

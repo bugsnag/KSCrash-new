@@ -1050,7 +1050,9 @@ payload)
             // type and arguments.
             NodePointer unboundType = Factory.createNode(Node::Kind::Type);
             unboundType->addChild(nominalType, Factory);
-            
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
             Node::Kind kind;
             switch (nominalType->getKind()) { // look through Type node
                 case Node::Kind::Class:
@@ -1070,7 +1072,8 @@ payload)
             result->addChild(args, Factory);
             return result;
         }
-        
+#pragma clang diagnostic pop
+
         NodePointer demangleBoundGenericType() {
             // bound-generic-type ::= 'G' nominal-type (args+ '_')+
             //
@@ -1305,7 +1308,9 @@ payload)
                 // Create a subscript or variable node and make it the accessor's child
                 NodePointer wrappedEntity;
                 bool isSubscript = false;
-                
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
                 // Rewrite the subscript's name to match the new mangling scheme
                 switch (name->getKind()) {
                     case Node::Kind::Identifier:
@@ -1330,7 +1335,8 @@ payload)
                     default:
                         break;
                 }
-                
+#pragma clang diagnostic pop
+
                 // Create wrapped entity node
                 if (isSubscript) {
                     wrappedEntity = Factory.createNode(Node::Kind::Subscript);

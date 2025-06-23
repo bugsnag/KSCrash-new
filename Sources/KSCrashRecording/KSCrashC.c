@@ -120,6 +120,8 @@ static void notifyOfBeforeInstallationState(void)
 {
     KSLOG_DEBUG("Notifying of pre-installation state");
     switch (g_lastApplicationState) {
+        case KSApplicationStateNone:
+            return;
         case KSApplicationStateDidBecomeActive:
             return kscrash_notifyAppActive(true);
         case KSApplicationStateWillResignActiveActive:
