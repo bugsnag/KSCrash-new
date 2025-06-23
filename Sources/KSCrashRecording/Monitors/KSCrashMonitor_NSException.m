@@ -55,12 +55,9 @@ static NSUncaughtExceptionHandler *g_previousUncaughtExceptionHandler;
 #pragma mark - Helpers -
 // ============================================================================
 
-BOOL jsonDictionaryIsValid(NSDictionary *obj, NSError **error) {
+BOOL jsonDictionaryIsValid(NSDictionary *obj) {
     @try {
-        if (![obj isKindOfClass:[NSDictionary class]] || ![NSJSONSerialization isValidJSONObject:(id _Nonnull)obj]) {
-            return NO;
-        }
-        return YES;
+        return [obj isKindOfClass:[NSDictionary class]] && [NSJSONSerialization isValidJSONObject:(id _Nonnull)obj];
     } @catch (NSException *exception) {
         return NO;
     }
@@ -70,7 +67,7 @@ NSDictionary * prepareUserInfoDictionary(NSDictionary *dictionary) {
     if (!dictionary) {
         return nil;
     }
-    if (jsonDictionaryIsValid(dictionary, nil)) {
+    if (jsonDictionaryIsValid(dictionary)) {
         return dictionary;
     }
     NSMutableDictionary *json = [NSMutableDictionary dictionary];
@@ -79,7 +76,7 @@ NSDictionary * prepareUserInfoDictionary(NSDictionary *dictionary) {
             continue;
         }
         const id value = dictionary[key];
-        if (jsonDictionaryIsValid(@{key: value}, nil)) {
+        if (jsonDictionaryIsValid(@{key: value})) {
             json[key] = value;
         } else if ([value isKindOfClass:[NSDictionary class]]) {
             json[key] = prepareUserInfoDictionary(value);
