@@ -33,7 +33,7 @@
  * On armv7 the least significant bit of the pointer distinguishes
  * between thumb mode (2-byte instructions) and normal mode (4-byte instructions).
  * On arm64 all instructions are 4-bytes wide so the two least significant
- * bytes should always be 0.
+ * bits should always be 0.
  * On x86_64 and i386, instructions are variable length so all bits are
  * signficant.
  */
@@ -92,7 +92,12 @@ static int leb128_uintptr_decode(struct leb128_uintptr_context *context, uint8_t
 __attribute__((annotate("oclint:suppress[deep nested block]")))
 #endif
 bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
-    KSBinaryImage *image = ksdl_image_at_address(cursor->stackEntry.address);
+    // Cursor at 0 idx is a dummy so we start stack from 1
+    uintptr_t instructionAddress = cursor->state.currentDepth == 1
+                                    ? cursor->stackEntry.address
+                                    : CALL_INSTRUCTION_FROM_RETURN_ADDRESS(cursor->stackEntry.address);
+
+    KSBinaryImage *image = ksdl_image_at_address(instructionAddress);
     if (!image || !image->header) {
         return false;
     }
@@ -130,9 +135,9 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
                         if (strncmp(section->sectname, SECT_TEXT, sizeof(section->sectname)) == 0) {
                             uintptr_t start = section->addr + slide;
                             uintptr_t end = start + section->size;
-                            if (cursor->stackEntry.address < start || cursor->stackEntry.address >= end) {
+                            if (instructionAddress < start || instructionAddress >= end) {
                                 KSLOG_ERROR("Address %p is outside the " SECT_TEXT " section of image %s",
-                                                (void *)cursor->stackEntry.address, image->name);
+                                                (void *)instructionAddress, image->name);
                                 return false;
                             }
                             break;
@@ -200,7 +205,7 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
                     next_func_start &= ~THUMB_INSTRUCTION_TAG;
                 }
 #endif
-                if (cursor->stackEntry.address < next_func_start) {
+                if (instructionAddress < next_func_start) {
                     // address was in the previous function
                     break;
                 }
@@ -253,12 +258,7 @@ bool kssymbolicator_symbolicate(KSStackCursor *cursor) {
         }
     }
 
-    if (image->vmAddress == 0) {
-        cursor->stackEntry.imageAddress = (uintptr_t)image->header;
-    } else {
-        cursor->stackEntry.imageAddress = image->vmAddress;
-    }
-
+    cursor->stackEntry.imageAddress = (uintptr_t)image->header;
     cursor->stackEntry.imageName = image->name;
 
     return true;

@@ -1071,6 +1071,14 @@ static void writeThread(const KSCrashReportWriter *const writer, const char *con
         const char *name = ksccd_getThreadName(thread);
         if (name != NULL) {
             writer->addStringElement(writer, KSCrashField_Name, name);
+        } else {
+            // pthread_getname_np() acquires no locks if passed pthread_self() as
+            // of libpthread-330.201.1 (macOS 10.14 / iOS 12)
+            bool isSelfThread = thread == ksthread_self();
+            char threadName[64] = {0};
+            if (isSelfThread && !pthread_getname_np(pthread_self(), threadName, sizeof(threadName)) && threadName[0] != 0) {
+                writer->addStringElement(writer, KSCrashField_Name, threadName);
+            }
         }
         name = ksccd_getQueueName(thread);
         if (name != NULL) {
