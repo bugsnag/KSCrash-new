@@ -75,9 +75,9 @@
           onCompletion:(KSCrashReportFilterCompletion)onCompletion
 {
     KSLOG_TRACE(@"Starting alert view process");
-    _reports = [reports copy];
-    _onCompletion = [onCompletion copy];
-    _expectedButtonIndex = noAnswer == nil ? 0 : 1;
+    self.reports = [reports copy];
+    self.onCompletion = [onCompletion copy];
+    self.expectedButtonIndex = noAnswer == nil ? 0 : 1;
 
 #if KSCRASH_HAS_UIALERTCONTROLLER
     UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title

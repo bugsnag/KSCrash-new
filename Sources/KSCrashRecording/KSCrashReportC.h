@@ -32,8 +32,8 @@
 
 #include <stdbool.h>
 
-#import "KSCrashMonitorContext.h"
-#import "KSCrashReportWriter.h"
+#include "KSCrashMonitorContext.h"
+#include "KSCrashReportWriter.h"
 
 #ifdef __cplusplus
 extern "C" {

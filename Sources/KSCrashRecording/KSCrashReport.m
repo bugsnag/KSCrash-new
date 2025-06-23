@@ -45,7 +45,7 @@
                                                                               \
     -(id)untypedValue                                                         \
     {                                                                         \
-        return _value;                                                        \
+        return self.value;                                                    \
     }                                                                         \
                                                                               \
     -(BOOL)isEqual : (id)object                                               \

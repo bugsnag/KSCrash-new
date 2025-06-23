@@ -130,7 +130,7 @@ static void appendUTF8Format(NSMutableData *data, NSString *format, ...)
        contentType:(NSString *)contentType
           filename:(NSString *)filename
 {
-    [_fields addObject:[KSHTTPPostField data:data name:name contentType:contentType filename:filename]];
+    [self.fields addObject:[KSHTTPPostField data:data name:name contentType:contentType filename:filename]];
 }
 
 - (void)appendUTF8String:(NSString *)string
@@ -153,19 +153,19 @@ static void appendUTF8Format(NSMutableData *data, NSString *format, ...)
 - (NSData *)data
 {
     NSUInteger baseSize = 0;
-    for (KSHTTPPostField *desc in _fields) {
+    for (KSHTTPPostField *desc in self.fields) {
         baseSize += [desc.data length] + 200;
     }
 
     NSMutableData *data = [NSMutableData dataWithCapacity:baseSize];
     BOOL firstFieldSent = NO;
-    for (KSHTTPPostField *field in _fields) {
+    for (KSHTTPPostField *field in self.fields) {
         if (firstFieldSent) {
             appendUTF8String(data, @"\r\n");
         } else {
             firstFieldSent = YES;
         }
-        appendUTF8Format(data, @"--%@\r\n", _boundary);
+        appendUTF8Format(data, @"--%@\r\n", self.boundary);
         if (field.filename != nil) {
             appendUTF8Format(data, @"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n",
                              [self toStringWithQuotesEscaped:field.name],
@@ -177,10 +177,10 @@ static void appendUTF8Format(NSMutableData *data, NSString *format, ...)
         if (field.contentType != nil) {
             appendUTF8Format(data, @"Content-Type: %@\r\n", field.contentType);
         }
-        appendUTF8Format(data, @"\r\n", _boundary);
+        appendUTF8Format(data, @"\r\n", self.boundary);
         [data appendData:field.data];
     }
-    appendUTF8Format(data, @"\r\n--%@--\r\n", _boundary);
+    appendUTF8Format(data, @"\r\n--%@--\r\n", self.boundary);
 
     return data;
 }

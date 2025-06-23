@@ -181,7 +181,7 @@ failed:
 
 - (void)onReachabilityFlagsChanged:(SCNetworkReachabilityFlags)flags
 {
-    if (_flags != flags) {
+    if (self.flags != flags) {
         BOOL reachable = [self isReachableWithFlags:flags];
 #if TARGET_OS_IPHONE
         BOOL WWANOnly = reachable && (flags & kSCNetworkReachabilityFlagsIsWWAN) != 0;
@@ -189,16 +189,16 @@ failed:
         BOOL WWANOnly = NO;
 #endif
 
-        BOOL rChanged = _reachable != reachable;
-        BOOL wChanged = _WWANOnly != WWANOnly;
+        BOOL rChanged = self.reachable != reachable;
+        BOOL wChanged = self.WWANOnly != WWANOnly;
 
         [self willChangeValueForKey:kKVOProperty_Flags];
         if (rChanged) [self willChangeValueForKey:kKVOProperty_Reachable];
         if (wChanged) [self willChangeValueForKey:kKVOProperty_WWANOnly];
 
-        _flags = flags;
-        _reachable = reachable;
-        _WWANOnly = WWANOnly;
+        self.flags = flags;
+        self.reachable = reachable;
+        self.WWANOnly = WWANOnly;
 
         [self didChangeValueForKey:kKVOProperty_Flags];
         if (rChanged) [self didChangeValueForKey:kKVOProperty_Reachable];
