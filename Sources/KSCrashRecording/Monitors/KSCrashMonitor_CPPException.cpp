@@ -158,10 +158,9 @@ static void CPPExceptionTerminate(void)
         KSCrash_MonitorContext *crashContext = &g_monitorContext;
         memset(crashContext, 0, sizeof(*crashContext));
 
-        char descriptionBuff[DESCRIPTION_BUFFER_LENGTH];
+        char descriptionBuff[DESCRIPTION_BUFFER_LENGTH] = {0};
         if (!emptyThrow) {
             description = descriptionBuff;
-            descriptionBuff[0] = 0;
 
             KSLOG_DEBUG("Discovering what kind of exception was thrown.");
 
