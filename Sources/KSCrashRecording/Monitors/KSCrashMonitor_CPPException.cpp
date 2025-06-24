@@ -158,8 +158,8 @@ static void CPPExceptionTerminate(void)
         KSCrash_MonitorContext *crashContext = &g_monitorContext;
         memset(crashContext, 0, sizeof(*crashContext));
 
+        char descriptionBuff[DESCRIPTION_BUFFER_LENGTH];
         if (!emptyThrow) {
-            char descriptionBuff[DESCRIPTION_BUFFER_LENGTH];
             description = descriptionBuff;
             descriptionBuff[0] = 0;
 
@@ -169,7 +169,7 @@ static void CPPExceptionTerminate(void)
             try {
                 throw;
             } catch (std::exception &exc) {
-                strncpy(descriptionBuff, exc.what(), sizeof(descriptionBuff));
+                strlcpy(descriptionBuff, exc.what(), sizeof(descriptionBuff));
             }
 #define CATCH_VALUE(TYPE, PRINTFTYPE)                                                                \
 catch (TYPE value) { snprintf(descriptionBuff, sizeof(descriptionBuff), "%" #PRINTFTYPE, value); \
