@@ -26,15 +26,24 @@
 
 import Foundation
 
+// swift-format-ignore: AlwaysUseLowerCamelCase
 struct PartialCrashReport: Decodable {
     struct BinaryImage: Decodable {
-        var cpu_subtype: Int
-        var cpu_type: Int
-        var image_addr: UInt64
-        var image_size: Int
-        var name: String
-        var uuid: String
+        var image_addr: UInt64?
+        var image_size: UInt64?
+        var name: String?
+        var uuid: String?
+        var cpu_type: Int?
+        var cpu_subtype: Int?
+        var major_version: Int?
+        var minor_version: Int?
+        var revision_version: Int?
     }
+
+    struct Report: Decodable {
+        var binary_images: [BinaryImage]?
+    }
+
     struct Crash: Decodable {
         struct Error: Decodable {
             struct Signal: Decodable {
@@ -51,7 +60,7 @@ struct PartialCrashReport: Decodable {
                 var name: String?
                 var language: String?
                 var line_of_code: String?
-                var backtrace: [String]? // Can be actually any JSON encodable structure
+                var backtrace: [String]?  // Can be actually any JSON encodable structure
             }
 
             var reason: String?
@@ -66,7 +75,7 @@ struct PartialCrashReport: Decodable {
             struct Backtrace: Decodable {
                 struct Frame: Decodable {
                     var instruction_addr: UInt64
-                    
+
                     var object_addr: UInt64?
                     var object_name: String?
 
@@ -93,5 +102,6 @@ struct PartialCrashReport: Decodable {
     }
 
     var crash: Crash?
+    var report: Report?
     var binary_images: [BinaryImage]?
 }

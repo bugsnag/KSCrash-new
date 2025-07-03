@@ -98,7 +98,7 @@
     if (self.crashNotifyCallback) {
         config.crashNotifyCallback = (KSReportWriteCallback)imp_implementationWithBlock(self.crashNotifyCallback);
     }
-    if (config.reportWrittenCallback) {
+    if (self.reportWrittenCallback) {
         config.reportWrittenCallback = (KSReportWrittenCallback)imp_implementationWithBlock(self.reportWrittenCallback);
     }
     config.addConsoleLogToReport = self.addConsoleLogToReport;

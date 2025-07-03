@@ -66,11 +66,23 @@ const struct segment_command command2 = {
 @interface KSDynamicLinker_Tests : XCTestCase
 @end
 
+// Declare external function only for testing
+extern void ksbic_resetCache(void);
+extern void ksbic_init(void);
+
 @implementation KSDynamicLinker_Tests
 
 + (void)setUp {
     [super setUp];
     ksdl_binary_images_initialize();
+}
+
+- (void)setUp
+{
+    [super setUp];
+    ksbic_resetCache();
+    ksbic_init();
+    [NSThread sleepForTimeInterval:0.1];
 }
 
 static KSBinaryImage *get_tail(KSBinaryImage *head) {

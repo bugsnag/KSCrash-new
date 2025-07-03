@@ -36,6 +36,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "KSBinaryImageCache.h"
 #include "KSLogger.h"
 #include "KSMemory.h"
 #include "KSPlatformSpecificDefines.h"
