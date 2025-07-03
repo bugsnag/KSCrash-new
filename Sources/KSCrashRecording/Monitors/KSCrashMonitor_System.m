@@ -32,6 +32,7 @@
 #import "KSDynamicLinker.h"
 #import "KSSysCtl.h"
 #import "KSSystemCapabilities.h"
+#import "KSJailbreak.h"
 
 // #define KSLogger_LocalLevel TRACE
 #import "KSLogger.h"
@@ -52,6 +53,7 @@ typedef struct {
     const char *kernelVersion;
     const char *osVersion;
     bool isJailbroken;
+    bool procTranslated;
     const char *appStartTime;
     const char *executablePath;
     const char *executableName;
@@ -61,6 +63,8 @@ typedef struct {
     const char *bundleShortVersion;
     const char *appID;
     const char *cpuArchitecture;
+    const char *binaryArchitecture;
+    const char *clangVersion;
     int cpuType;
     int cpuSubType;
     int binaryCPUType;
@@ -287,7 +291,38 @@ static const char *getCurrentCPUArch(void)
  *
  * @return YES if the device is jailbroken.
  */
-static bool isJailbroken(void) { return ksdl_imageNamed("MobileSubstrate", false) != UINT32_MAX; }
+static inline bool isJailbroken(void) {
+    static bool initialized_jb;
+    static bool is_jb;
+    if(!initialized_jb) {
+        get_jailbreak_status(&is_jb);
+
+        // Also keep using the old detection method.
+        if(ksdl_imageNamed("MobileSubstrate", false) != NULL) {
+            is_jb = true;
+        }
+        initialized_jb = true;
+    }
+
+    return is_jb;
+}
+
+/** Check if the app is started using Rosetta translation environment
+ *
+ * @return YES if app is translated using Rosetta
+ */
+static bool procTranslated(void) {
+#if KSCRASH_HOST_MAC
+    // https://developer.apple.com/documentation/apple-silicon/about-the-rosetta-translation-environment
+    int proc_translated = 0;
+    size_t size = sizeof(proc_translated);
+    if (!sysctlbyname("sysctl.proc_translated", &proc_translated, &size, NULL, 0) && proc_translated) {
+        return @YES;
+    }
+#endif
+
+    return @NO;
+}
 
 /** Check if the current build is a debug build.
  *
@@ -452,6 +487,7 @@ static void initialize(void)
         if (isSimulatorBuild()) {
             g_systemData.machine = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_MODEL_IDENTIFIER"]);
             g_systemData.model = "simulator";
+            g_systemData.systemVersion = cString([NSProcessInfo processInfo].environment[@"SIMULATOR_RUNTIME_VERSION"]);
         } else {
 #if KSCRASH_HOST_MAC
             // MacOS has the machine in the model field, and no model
@@ -465,6 +501,7 @@ static void initialize(void)
         g_systemData.kernelVersion = stringSysctl("kern.version");
         g_systemData.osVersion = stringSysctl("kern.osversion");
         g_systemData.isJailbroken = isJailbroken();
+        g_systemData.procTranslated = procTranslated();
         g_systemData.appStartTime = dateString(time(NULL));
         g_systemData.executablePath = cString(getExecutablePath());
         g_systemData.executableName = cString(infoDict[@"CFBundleExecutable"]);
@@ -485,6 +522,13 @@ static void initialize(void)
         g_systemData.deviceAppHash = getDeviceAndAppHash();
         g_systemData.buildType = getBuildType();
         g_systemData.memorySize = kssysctl_uint64ForName("hw.memsize");
+
+        const char* binaryArch = getCPUArchForCPUType(header->cputype, header->cpusubtype);
+        g_systemData.binaryArchitecture = binaryArch == NULL ? "" : binaryArch;
+
+#ifdef __clang_version__
+        g_systemData.clangVersion = __clang_version__;
+#endif
     }
 }
 
@@ -513,6 +557,7 @@ static void addContextualInfoToEvent(KSCrash_MonitorContext *eventContext)
         COPY_REFERENCE(kernelVersion);
         COPY_REFERENCE(osVersion);
         COPY_REFERENCE(isJailbroken);
+        COPY_REFERENCE(procTranslated);
         COPY_REFERENCE(appStartTime);
         COPY_REFERENCE(executablePath);
         COPY_REFERENCE(executableName);
@@ -522,6 +567,8 @@ static void addContextualInfoToEvent(KSCrash_MonitorContext *eventContext)
         COPY_REFERENCE(bundleShortVersion);
         COPY_REFERENCE(appID);
         COPY_REFERENCE(cpuArchitecture);
+        COPY_REFERENCE(binaryArchitecture);
+        COPY_REFERENCE(clangVersion);
         COPY_REFERENCE(cpuType);
         COPY_REFERENCE(cpuSubType);
         COPY_REFERENCE(binaryCPUType);

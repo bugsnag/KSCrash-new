@@ -67,6 +67,9 @@ enum {
      * semantic or structural reasons.
      */
     KSJSON_ERROR_INVALID_DATA = 5,
+    
+    /** Encoding or decoding: One of the arguments is not valid (e.g. null for an required argument). */
+    KSJSON_ERROR_INVALID_ARGUMENT = 6,
 };
 
 /** Get a description for an error code.

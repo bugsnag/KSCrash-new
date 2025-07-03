@@ -1,9 +1,9 @@
 //
-//  KSCrashMonitorContextHelper.h
+//  KSStringConversion.h
 //
-//  Created by Gleb Linnik on 15.06.2024.
+//  Created by Robert B on 2025-04-23.
 //
-//  Copyright (c) 2012 Karl Stenerud. All rights reserved.
+//  Copyright (c) 2025 Karl Stenerud. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,31 +24,37 @@
 // THE SOFTWARE.
 //
 
-#ifndef KSCrashMonitorContextHelper_h
-#define KSCrashMonitorContextHelper_h
+#ifndef HDR_KSStringConversion_h
+#define HDR_KSStringConversion_h
 
-#include "KSCrashMonitor.h"
-#include "KSCrashMonitorContext.h"
-#include "KSCrashMonitorHelper.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <uuid/uuid.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static void inline ksmc_fillMonitorContext(KSCrash_MonitorContext *monitorContext, KSCrashMonitorAPI *monitorApi)
-{
-    if (monitorContext) {
-        monitorContext->monitorId = kscm_getMonitorId(monitorApi);
-        monitorContext->monitorFlags = kscm_getMonitorFlags(monitorApi);
-    }
-}
-
-/** Check if the application is in foreground.
+/**
+ * Convert an unsigned integer to a hex string.
+ * This will write a maximum of 17 characters (including the NUL) to dst.
+ *
+ * If min_digits is greater than 1, it will prepad with zeroes to reach this number of digits
+ * (up to a maximum of 16 digits).
+ *
+ * Returns the length of the string written to dst (not including the NUL).
  */
-bool ksmc_isInForeground(void);
+size_t kssc_uint64_to_hex(uint64_t value, char* dst, int min_digits, bool uppercase);
+
+/**
+ * Convert an uuid_t to an uuid string.
+ * This will write 37 characters (including the NUL) to dst.
+ */
+void kssc_uuid_to_string(uuid_t value, char* dst);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* KSCrashMonitorContextHelper_h */
+#endif  // HDR_KSStringConversion_h

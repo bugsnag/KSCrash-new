@@ -27,6 +27,18 @@
 #include <mach/mach.h>
 #include <stdlib.h>
 
+#define EXC_UNIX_BAD_SYSCALL 0x10000    /* SIGSYS */
+#define EXC_UNIX_BAD_PIPE    0x10001    /* SIGPIPE */
+#define EXC_UNIX_ABORT       0x10002    /* SIGABRT */
+/*
+ *      EXC_BAD_ACCESS
+ *      Note: do not conflict with kern_return_t values returned by vm_fault
+ */
+#define EXC_ARM_DA_ALIGN    0x101    /* Alignment Fault */
+#define EXC_ARM_DA_DEBUG    0x102    /* Debug (watch/break) Fault */
+#define EXC_ARM_SP_ALIGN    0x103    /* SP Alignment Fault */
+#define EXC_ARM_SWP         0x104    /* SWP instruction */
+
 #define RETURN_NAME_FOR_ENUM(A) \
     case A:                     \
         return #A
@@ -102,13 +114,14 @@ const char *ksmach_kernelReturnCodeName(const int64_t returnCode)
         RETURN_NAME_FOR_ENUM(KERN_NOT_WAITING);
         RETURN_NAME_FOR_ENUM(KERN_OPERATION_TIMED_OUT);
         RETURN_NAME_FOR_ENUM(KERN_CODESIGN_ERROR);
+        // Note: these are only valid for EXC_BAD_ACCESS
+        RETURN_NAME_FOR_ENUM(EXC_ARM_DA_ALIGN);
+        RETURN_NAME_FOR_ENUM(EXC_ARM_DA_DEBUG);
+        RETURN_NAME_FOR_ENUM(EXC_ARM_SP_ALIGN);
+        RETURN_NAME_FOR_ENUM(EXC_ARM_SWP);
     }
     return NULL;
 }
-
-#define EXC_UNIX_BAD_SYSCALL 0x10000 /* SIGSYS */
-#define EXC_UNIX_BAD_PIPE 0x10001    /* SIGPIPE */
-#define EXC_UNIX_ABORT 0x10002       /* SIGABRT */
 
 int ksmach_machExceptionForSignal(const int sigNum)
 {

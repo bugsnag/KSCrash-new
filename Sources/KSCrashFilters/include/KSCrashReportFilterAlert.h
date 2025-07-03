@@ -40,6 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
  * Output: Same as input (passthrough)
  */
 NS_SWIFT_NAME(CrashReportFilterAlert)
+NS_EXTENSION_UNAVAILABLE_IOS("Alert Filter requires NSApplication, which is unavailable on watchOS extensions")
 @interface KSCrashReportFilterAlert : NSObject <KSCrashReportFilter>
 
 - (instancetype)init NS_UNAVAILABLE;

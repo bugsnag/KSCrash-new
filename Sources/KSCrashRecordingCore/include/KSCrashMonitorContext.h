@@ -189,6 +189,7 @@ typedef struct KSCrash_MonitorContext {
         const char *kernelVersion;
         const char *osVersion;
         bool isJailbroken;
+        bool procTranslated;
         const char *bootTime;
         const char *appStartTime;
         const char *executablePath;
@@ -199,6 +200,8 @@ typedef struct KSCrash_MonitorContext {
         const char *bundleShortVersion;
         const char *appID;
         const char *cpuArchitecture;
+        const char *binaryArchitecture;
+        const char *clangVersion;
         int cpuType;
         int cpuSubType;
         int binaryCPUType;
@@ -210,6 +213,7 @@ typedef struct KSCrash_MonitorContext {
         const char *deviceAppHash;
         const char *buildType;
         uint64_t storageSize;
+        uint64_t freeStorageSize;
         uint64_t memorySize;
         uint64_t freeMemory;
         uint64_t usableMemory;

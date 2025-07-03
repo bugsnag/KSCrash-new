@@ -136,6 +136,7 @@ KSCRF_DEFINE_CONSTANT(KSCrashField, NotableAddresses, notableAddresses, "notable
 KSCRF_DEFINE_CONSTANT(KSCrashField, Registers, registers, "registers")
 KSCRF_DEFINE_CONSTANT(KSCrashField, Skipped, skipped, "skipped")
 KSCRF_DEFINE_CONSTANT(KSCrashField, Stack, stack, "stack")
+KSCRF_DEFINE_CONSTANT(KSCrashField, State, state, "state")
 
 #pragma mark - Binary Image -
 
@@ -219,6 +220,8 @@ KSCRF_DEFINE_CONSTANT(KSCrashField, BundleName, bundleName, "CFBundleName")
 KSCRF_DEFINE_CONSTANT(KSCrashField, BundleShortVersion, bundleShortVersion, "CFBundleShortVersionString")
 KSCRF_DEFINE_CONSTANT(KSCrashField, BundleVersion, bundleVersion, "CFBundleVersion")
 KSCRF_DEFINE_CONSTANT(KSCrashField, CPUArch, cpuArch, "cpu_arch")
+KSCRF_DEFINE_CONSTANT(KSCrashField, BinaryArch, binaryArch, "binary_arch")
+KSCRF_DEFINE_CONSTANT(KSCrashField, ClangVersion, clangVersion, "clang_version")
 KSCRF_DEFINE_CONSTANT(KSCrashField, BinaryCPUType, binaryCPUType, "binary_cpu_type")
 KSCRF_DEFINE_CONSTANT(KSCrashField, BinaryCPUSubType, binaryCPUSubType, "binary_cpu_subtype")
 KSCRF_DEFINE_CONSTANT(KSCrashField, DeviceAppHash, deviceAppHash, "device_app_hash")

@@ -36,6 +36,10 @@
 extern "C" {
 #endif
 
+#ifdef __cplusplus
+#define restrict __restrict__
+#endif
+
 /** Test if the specified memory is safe to read from.
  *
  * @param memory A pointer to the memory to test.

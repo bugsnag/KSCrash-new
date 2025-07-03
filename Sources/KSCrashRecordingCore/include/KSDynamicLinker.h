@@ -30,17 +30,41 @@
 #include <dlfcn.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    uint64_t address;
+typedef struct ks_mach_image {
+    /// The mach_header or mach_header_64
+    ///
+    /// This is also the memory address where the __TEXT segment has been loaded by dyld, including slide.
+    const struct mach_header *header;
+
+    /// The vmaddr specified for the __TEXT segment
+    ///
+    /// This is the load address specified at build time, and does not account for slide applied by dyld.
     uint64_t vmAddress;
+
+    /// The vmsize of the __TEXT segment
     uint64_t size;
+
+    /// The pathname of the shared object (Dl_info.dli_fname)
     const char *name;
+
+    /// A UUID that uniquely identifies this image, used to identify its associated dSYM
     const uint8_t *uuid;
+
+    /// The virtual memory address slide of the image
+    intptr_t slide;
+
+    /// True if the image has been unloaded and should be ignored
+    bool unloaded;
+
+    /// True if the image is referenced by the current crash report.
+    bool inCrashReport;
+
     int cpuType;
     int cpuSubType;
     uint64_t majorVersion;
@@ -50,25 +74,25 @@ typedef struct {
     const char *crashInfoMessage2;
     const char *crashInfoBacktrace;
     const char *crashInfoSignature;
+    
+    /// The next image in the linked list
+    _Atomic(struct ks_mach_image *) next;
 } KSBinaryImage;
 
-/** Get the number of loaded binary images.
+/**
+ * Initialize the headers management system.
+ * This MUST be called before calling anything else.
  */
-int ksdl_imageCount(void);
+void ksdl_binary_images_initialize(void);
 
-/** Get information about a binary image.
- *
- * @param index The binary index.
- *
- * @param buffer A structure to hold the information.
- *
- * @return True if the image was successfully queried.
+/**
+ * Returns the head of the link list of Binary Image info
  */
-bool ksdl_getBinaryImage(int index, KSBinaryImage *buffer);
+KSBinaryImage *ksdl_get_images(void);
 
 /** Get information about a binary image based on mach_header.
  *
- * @param header_ptr The pointer to mach_header of the image.
+ * @param header The Mach binary image header.
  *
  * @param image_name The name of the image.
  *
@@ -76,7 +100,7 @@ bool ksdl_getBinaryImage(int index, KSBinaryImage *buffer);
  *
  * @return True if the image was successfully queried.
  */
-bool ksdl_getBinaryImageForHeader(const void *const header_ptr, const char *const image_name, KSBinaryImage *buffer);
+bool ksdl_getBinaryImageForHeader(const struct mach_header *header, intptr_t slide, KSBinaryImage *buffer);
 
 /** Find a loaded binary image with the specified name.
  *
@@ -84,9 +108,9 @@ bool ksdl_getBinaryImageForHeader(const void *const header_ptr, const char *cons
  *
  * @param exactMatch If true, look for an exact match instead of a partial one.
  *
- * @return the index of the matched image, or UINT32_MAX if not found.
+ * @return the matched image, or NULL if not found.
  */
-uint32_t ksdl_imageNamed(const char *const imageName, bool exactMatch);
+KSBinaryImage *ksdl_imageNamed(const char *const imageName, bool exactMatch);
 
 /** Get the UUID of a loaded binary image with the specified name.
  *
@@ -99,21 +123,45 @@ uint32_t ksdl_imageNamed(const char *const imageName, bool exactMatch);
  */
 const uint8_t *ksdl_imageUUID(const char *const imageName, bool exactMatch);
 
-/** async-safe version of dladdr.
- *
- * This method searches the dynamic loader for information about any image
- * containing the specified address. It may not be entirely successful in
- * finding information, in which case any fields it could not find will be set
- * to NULL.
- *
- * Unlike dladdr(), this method does not make use of locks, and does not call
- * async-unsafe functions.
- *
- * @param address The address to search for.
- * @param info Gets filled out by this function.
- * @return true if at least some information was found.
+/**
+ * Returns the process's main image
  */
-bool ksdl_dladdr(const uintptr_t address, Dl_info *const info);
+KSBinaryImage *ksdl_get_main_image(void);
+
+/**
+ * Returns the image that contains KSCrash.
+ */
+KSBinaryImage *ksdl_get_self_image(void);
+
+/**
+ * Find the loaded binary image that contains the specified instruction address.
+*/
+KSBinaryImage *ksdl_image_at_address(const uintptr_t address);
+
+/** Get the address of the first command following a header (which will be of
+ * type struct load_command).
+ *
+ * @param header The header to get commands for.
+ *
+ * @return The address of the first command, or NULL if none was found (which
+ *         should not happen unless the header or image is corrupt).
+ */
+uintptr_t ksdl_first_cmd_after_header(const struct mach_header * header);
+
+/**
+ * Resets mach header data (for unit tests).
+ */
+void ksdl_test_support_mach_headers_reset(void);
+
+/**
+ * Add a binary image (for unit tests).
+ */
+void ksdl_test_support_mach_headers_add_image(const struct mach_header *mh, intptr_t slide);
+
+/**
+ * Remove a binary image (for unit tests).
+ */
+void ksdl_test_support_mach_headers_remove_image(const struct mach_header *mh, intptr_t slide);
 
 #ifdef __cplusplus
 }

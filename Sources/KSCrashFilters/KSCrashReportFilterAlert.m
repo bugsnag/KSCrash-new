@@ -56,7 +56,7 @@
              yesAnswer:(NSString *)yesAnswer
               noAnswer:(NSString *)noAnswer
                reports:(NSArray<id<KSCrashReport>> *)reports
-          onCompletion:(KSCrashReportFilterCompletion)onCompletion;
+          onCompletion:(KSCrashReportFilterCompletion)onCompletion NS_EXTENSION_UNAVAILABLE_IOS("Alert Filter requires NSApplication, which is unavailable on watchOS extensions");
 
 @end
 

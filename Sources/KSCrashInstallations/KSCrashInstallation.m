@@ -37,6 +37,7 @@
 #import "KSJSONCodecObjC.h"
 #import "KSLogger.h"
 #import "KSNSErrorHelper.h"
+#import "KSDynamicLinker.h"
 
 /** Max number of properties that can be defined for writing to the report */
 #define kMaxProperties 500
@@ -237,8 +238,9 @@ static CrashHandlerData *g_crashHandlerData;
     KSCrash *handler = [KSCrash sharedInstance];
     @synchronized(handler) {
         g_crashHandlerData = self.crashHandlerData;
+        ksdl_binary_images_initialize();
 
-        configuration.crashNotifyCallback = ^(const struct KSCrashReportWriter *_Nonnull writer) {
+        configuration.crashNotifyCallback = ^(const struct KSCrashReportWriter *_Nonnull writer, bool requiresAsyncSafety) {
             CrashHandlerData *crashHandlerData = g_crashHandlerData;
             if (crashHandlerData == NULL) {
                 return;
@@ -250,7 +252,7 @@ static CrashHandlerData *g_crashHandlerData;
                 }
             }
             if (crashHandlerData->userCrashCallback != NULL) {
-                crashHandlerData->userCrashCallback(writer);
+                crashHandlerData->userCrashCallback(writer, requiresAsyncSafety);
             }
         };
 

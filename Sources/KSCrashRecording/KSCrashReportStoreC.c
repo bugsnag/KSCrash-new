@@ -208,7 +208,7 @@ int kscrs_getReportIDs(int64_t *reportIDs, int count, const KSCrashReportStoreCC
 static char *readReportAtPath(const char *path)
 {
     char *rawReport;
-    ksfu_readEntireFile(path, &rawReport, NULL, 2000000);
+    ksfu_readEntireFile(path, &rawReport, NULL, 20000000);
     if (rawReport == NULL) {
         KSLOG_ERROR("Failed to load report at path: %s", path);
         return NULL;
@@ -230,6 +230,13 @@ char *kscrs_readReportAtPath(const char *path)
     char *result = readReportAtPath(path);
     pthread_mutex_unlock(&g_mutex);
     return result;
+}
+
+void kscrs_getReportPathForID(int64_t reportID, char *path, const KSCrashReportStoreCConfiguration *const configuration)
+{
+    pthread_mutex_lock(&g_mutex);
+    getCrashReportPathByID(reportID, path, configuration);
+    pthread_mutex_unlock(&g_mutex);
 }
 
 char *kscrs_readReport(int64_t reportID, const KSCrashReportStoreCConfiguration *const configuration)

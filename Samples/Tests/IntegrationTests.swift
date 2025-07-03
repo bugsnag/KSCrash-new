@@ -71,6 +71,20 @@ final class CppTests: IntegrationTestBase {
             .compactMap(\.symbol_name).first
             .flatMap(CrashReportFilterDemangle.demangledCppSymbol)
         XCTAssertEqual(topSymbol, "sample_namespace::Report::crash()")
+        let imageList = rawReport.binary_images
+
+        var sampleAppFound = false
+        if let imageList = imageList {
+            for item in imageList {
+                XCTAssertNotNil(item)
+                if item.name.contains("Sample.app/Sample") {
+                    sampleAppFound = true
+                    XCTAssertNotEqual(item.image_addr, 0)
+                    XCTAssertNotEqual(item.image_size, 0)
+                }
+            }
+            XCTAssertTrue(sampleAppFound)
+        }
 
         let appleReport = try launchAndReportCrash()
         XCTAssertTrue(appleReport.contains("C++ exception"))
@@ -79,41 +93,54 @@ final class CppTests: IntegrationTestBase {
 
 #if !os(watchOS)
 
-    final class SignalTests: IntegrationTestBase {
-        func testAbort() throws {
-            try launchAndCrash(.signal_abort)
+final class SignalTests: IntegrationTestBase {
+    func testAbort() throws {
+        try launchAndCrash(.signal_abort)
 
-            let rawReport = try readPartialCrashReport()
-            try rawReport.validate()
-            XCTAssertEqual(rawReport.crash?.error?.type, "signal")
-            XCTAssertEqual(rawReport.crash?.error?.signal?.name, "SIGABRT")
+        let rawReport = try readPartialCrashReport()
+        try rawReport.validate()
+        XCTAssertEqual(rawReport.crash?.error?.type, "signal")
+        XCTAssertEqual(rawReport.crash?.error?.signal?.name, "SIGABRT")
 
-            let appleReport = try launchAndReportCrash()
-            XCTAssertTrue(appleReport.contains("SIGABRT"))
-        }
-
-        func testTermination() throws {
-            // Default (termination monitoring disabled)
-            try launchAndInstall()
-            try terminate()
-
-            XCTAssertFalse(try hasCrashReport())
-
-            // With termination monitoring enabled
-            try launchAndInstall { config in
-                config.isSigTermMonitoringEnabled = true
-            }
-            try terminate()
-
-            let rawReport = try readPartialCrashReport()
-            try rawReport.validate()
-            XCTAssertEqual(rawReport.crash?.error?.signal?.name, "SIGTERM")
-
-            let appleReport = try launchAndReportCrash()
-            print(appleReport)
-            XCTAssertTrue(appleReport.contains("SIGTERM"))
-        }
+        let appleReport = try launchAndReportCrash()
+        XCTAssertTrue(appleReport.contains("SIGABRT"))
     }
+
+    func testTermination() throws {
+        // Default (termination monitoring disabled)
+        try launchAndInstall()
+        try terminate()
+
+        XCTAssertFalse(try hasCrashReport())
+
+        // With termination monitoring enabled
+        try launchAndInstall { config in
+            config.isSigTermMonitoringEnabled = true
+        }
+        try terminate()
+
+        let rawReport = try readPartialCrashReport()
+        try rawReport.validate()
+        XCTAssertEqual(rawReport.crash?.error?.signal?.name, "SIGTERM")
+
+        let appleReport = try launchAndReportCrash()
+        print(appleReport)
+        XCTAssertTrue(appleReport.contains("SIGTERM"))
+    }
+    
+    func testTerminationWithMemoryIntrospection() throws {
+        try launchAndInstall { config in
+            config.isSigTermMonitoringEnabled = true
+            config.isMemoryIntrospectionEnabled = true
+        }
+        try terminate()
+
+        let rawReport = try readPartialCrashReport()
+        try rawReport.validate()
+        XCTAssertNotNil(rawReport.crash?.threads?.first?.notable_addresses)
+        XCTAssertTrue(rawReport.crash?.threads?.first?.notable_addresses?.keys.contains { $0.hasPrefix("stack@0x") } ?? false)
+    }
+}
 
 #endif
 
@@ -128,6 +155,12 @@ final class OtherTests: IntegrationTestBase {
             $0.symbol_name?.contains(KSCrashStacktraceCheckFuncName) ?? false
         })
         XCTAssertNotNil(expectedFrame)
+
+        let threadStates = ["TH_STATE_RUNNING", "TH_STATE_STOPPED", "TH_STATE_WAITING",
+                            "TH_STATE_UNINTERRUPTIBLE", "TH_STATE_HALTED"]
+        for thread in rawReport.crash?.threads  ?? [] {
+            XCTAssertTrue(threadStates.contains(thread.state))
+        }
 
         let appleReport = try launchAndReportCrash()
         XCTAssertTrue(appleReport.contains(KSCrashStacktraceCheckFuncName))

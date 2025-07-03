@@ -39,6 +39,7 @@
 #import "KSJSONCodecObjC.h"
 #import "KSNSErrorHelper.h"
 #import "KSSystemCapabilities.h"
+#import "KSDynamicLinker.h"
 
 // #define KSLogger_LocalLevel TRACE
 #import "KSLogger.h"
@@ -47,6 +48,10 @@
 #if KSCRASH_HAS_UIKIT
 #import <UIKit/UIKit.h>
 #endif
+#if __has_include(<AppKit/AppKit.h>)
+#import <AppKit/AppKit.h>
+#endif
+
 
 // ============================================================================
 #pragma mark - Globals -
@@ -201,6 +206,7 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
     COPY_STRING(kernelVersion);
     COPY_STRING(osVersion);
     COPY_PRIMITIVE(isJailbroken);
+    COPY_PRIMITIVE(procTranslated);
     COPY_STRING(bootTime);  // this field is populated in an optional monitor
     COPY_STRING(appStartTime);
     COPY_STRING(executablePath);
@@ -211,6 +217,8 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
     COPY_STRING(bundleShortVersion);
     COPY_STRING(appID);
     COPY_STRING(cpuArchitecture);
+    COPY_STRING(binaryArchitecture);
+    COPY_STRING(clangVersion);
     COPY_PRIMITIVE(cpuType);
     COPY_PRIMITIVE(cpuSubType);
     COPY_PRIMITIVE(binaryCPUType);
@@ -222,6 +230,7 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
     COPY_STRING(deviceAppHash);
     COPY_STRING(buildType);
     COPY_PRIMITIVE(storageSize);  // this field is populated in an optional monitor
+    COPY_PRIMITIVE(freeStorageSize);  // this field is populated in an optional monitor
     COPY_PRIMITIVE(memorySize);
     COPY_PRIMITIVE(freeMemory);
     COPY_PRIMITIVE(usableMemory);
@@ -233,6 +242,8 @@ static void currentSnapshotUserReportedExceptionHandler(NSException *exception)
 {
     self.configuration = [configuration copy] ?: [KSCrashConfiguration new];
     self.configuration.installPath = configuration.installPath ?: kscrash_getDefaultInstallPath();
+
+    ksdl_binary_images_initialize();
 
     if (self.configuration.reportStoreConfiguration.appName == nil) {
         self.configuration.reportStoreConfiguration.appName = self.bundleName;
@@ -390,6 +401,29 @@ SYNTHESIZE_CRASH_STATE_PROPERTY(BOOL, crashedLastLaunch)
     [nCenter addObserver:self
                 selector:@selector(applicationWillTerminate)
                     name:UIApplicationWillTerminateNotification
+                  object:nil];
+#endif
+#if KSCRASH_HOST_MAC
+    NSNotificationCenter *nCenter = [NSNotificationCenter defaultCenter];
+    [nCenter addObserver:self
+                selector:@selector(applicationDidBecomeActive)
+                    name:NSApplicationDidBecomeActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillResignActive)
+                    name:NSApplicationWillResignActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationDidEnterBackground)
+                    name:NSApplicationDidResignActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillEnterForeground)
+                    name:NSApplicationWillBecomeActiveNotification
+                  object:nil];
+    [nCenter addObserver:self
+                selector:@selector(applicationWillTerminate)
+                    name:NSApplicationWillTerminateNotification
                   object:nil];
 #endif
 #if KSCRASH_HAS_NSEXTENSION

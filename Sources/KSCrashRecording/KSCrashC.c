@@ -204,6 +204,7 @@ void handleConfiguration(KSCrashCConfiguration *configuration)
     }
 
     kscrashreport_setUserSectionWriteCallback(configuration->crashNotifyCallback);
+    kscrashreport_setThreadTracingEnabled(configuration->threadTracingEnabled);
     g_reportWrittenCallback = configuration->reportWrittenCallback;
     g_shouldAddConsoleLogToReport = configuration->addConsoleLogToReport;
     g_shouldPrintPreviousLog = configuration->printPreviousLogOnStartup;

@@ -31,6 +31,7 @@
 #include "KSMachineContext.h"
 #include "KSStackCursor_SelfThread.h"
 #include "KSThread.h"
+#include "KSMemory.h"
 
 // #define KSLogger_LocalLevel TRACE
 #include <cxxabi.h>
@@ -38,12 +39,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <execinfo.h>
 
 #include <exception>
 #include <typeinfo>
 
 #include "KSCxaThrowSwapper.h"
 #include "KSLogger.h"
+#include "KSStackCursor_Backtrace.h"
 
 #define STACKTRACE_BUFFER_LENGTH 30
 #define DESCRIPTION_BUFFER_LENGTH 1000
@@ -73,6 +76,12 @@ static KSCrash_MonitorContext g_monitorContext;
 // TODO: Thread local storage is not supported < ios 9.
 // Find some other way to do thread local. Maybe storage with lookup by tid?
 static KSStackCursor g_stackCursor;
+
+/** Buffer for the backtrace of the most recent exception. */
+static uintptr_t g_stackTrace[STACKTRACE_BUFFER_LENGTH];
+
+/** Number of backtrace entries in the most recent exception. */
+static int g_stackTraceCount = 0;
 
 // ============================================================================
 #pragma mark - Callbacks -
@@ -108,6 +117,19 @@ void __cxa_throw(void *thrown_exception, std::type_info *tinfo, void (*dest)(voi
 }
 }
 
+static const char *getExceptionTypeName(std::type_info *tinfo) {
+    // Runtime bug workaround: In some situations, __cxa_current_exception_type returns an invalid address.
+    // Check to make sure it's in valid memory before we try to call tinfo->name().
+    if (tinfo != NULL && ksmem_isMemoryReadable(tinfo, sizeof(*tinfo))) {
+        const char *name = tinfo->name();
+        // Also make sure the name pointer is valid.
+        if (name != NULL && ksmem_isMemoryReadable(name, 1)) {
+            return name;
+        }
+    }
+    return NULL;
+}
+
 static void CPPExceptionTerminate(void)
 {
     thread_act_array_t threads = NULL;
@@ -115,9 +137,20 @@ static void CPPExceptionTerminate(void)
     ksmc_suspendEnvironment(&threads, &numThreads);
     KSLOG_DEBUG("Trapped c++ exception");
     const char *name = NULL;
+    const char *description = NULL;
+    bool emptyThrow = false;
+
     std::type_info *tinfo = __cxxabiv1::__cxa_current_exception_type();
-    if (tinfo != NULL) {
-        name = tinfo->name();
+    if (tinfo == NULL) {
+        name = "std::terminate";
+        description = "throw may have been called without an exception";
+        emptyThrow = true;
+        if (!g_stackTraceCount) {
+            KSLOG_DEBUG("No exception backtrace");
+            g_stackTraceCount = backtrace((void **)g_stackTrace, sizeof(g_stackTrace) / sizeof(*g_stackTrace));
+        }
+    } else {
+        name = getExceptionTypeName(tinfo);
     }
 
     if (name == NULL || strcmp(name, "NSException") != 0) {
@@ -125,34 +158,37 @@ static void CPPExceptionTerminate(void)
         KSCrash_MonitorContext *crashContext = &g_monitorContext;
         memset(crashContext, 0, sizeof(*crashContext));
 
-        char descriptionBuff[DESCRIPTION_BUFFER_LENGTH];
-        const char *description = descriptionBuff;
-        descriptionBuff[0] = 0;
+        char descriptionBuff[DESCRIPTION_BUFFER_LENGTH] = {0};
+        if (!emptyThrow) {
+            description = descriptionBuff;
 
-        KSLOG_DEBUG("Discovering what kind of exception was thrown.");
-        g_captureNextStackTrace = false;
-        try {
-            throw;
-        } catch (std::exception &exc) {
-            strncpy(descriptionBuff, exc.what(), sizeof(descriptionBuff));
+            KSLOG_DEBUG("Discovering what kind of exception was thrown.");
+
+            g_captureNextStackTrace = false;
+            try {
+                throw;
+            } catch (std::exception &exc) {
+                strlcpy(descriptionBuff, exc.what(), sizeof(descriptionBuff));
+            }
+#define CATCH_VALUE(TYPE, PRINTFTYPE)                                                                \
+catch (TYPE value) { snprintf(descriptionBuff, sizeof(descriptionBuff), "%" #PRINTFTYPE, value); \
+}
+            CATCH_VALUE(char, d)
+            CATCH_VALUE(short, d)
+            CATCH_VALUE(int, d)
+            CATCH_VALUE(long, ld)
+            CATCH_VALUE(long long, lld)
+            CATCH_VALUE(unsigned char, u)
+            CATCH_VALUE(unsigned short, u)
+            CATCH_VALUE(unsigned int, u)
+            CATCH_VALUE(unsigned long, lu)
+            CATCH_VALUE(unsigned long long, llu)
+            CATCH_VALUE(float, f)
+            CATCH_VALUE(double, f)
+            CATCH_VALUE(long double, Lf)
+            CATCH_VALUE(char *, s)
+            catch (...) { description = NULL; }
         }
-#define CATCH_VALUE(TYPE, PRINTFTYPE) \
-    catch (TYPE value) { snprintf(descriptionBuff, sizeof(descriptionBuff), "%" #PRINTFTYPE, value); }
-        CATCH_VALUE(char, d)
-        CATCH_VALUE(short, d)
-        CATCH_VALUE(int, d)
-        CATCH_VALUE(long, ld)
-        CATCH_VALUE(long long, lld)
-        CATCH_VALUE(unsigned char, u)
-        CATCH_VALUE(unsigned short, u)
-        CATCH_VALUE(unsigned int, u)
-        CATCH_VALUE(unsigned long, lu)
-        CATCH_VALUE(unsigned long long, llu)
-        CATCH_VALUE(float, f)
-        CATCH_VALUE(double, f)
-        CATCH_VALUE(long double, Lf)
-        CATCH_VALUE(char *, s)
-        catch (...) { description = NULL; }
         g_captureNextStackTrace = g_isEnabled;
 
         // TODO: Should this be done here? Maybe better in the exception handler?
@@ -160,10 +196,24 @@ static void CPPExceptionTerminate(void)
         ksmc_getContextForThread(ksthread_self(), machineContext, true);
 
         KSLOG_DEBUG("Filling out context.");
+        if (name == NULL) {
+            name = "unknown";
+        }
+        if (description == NULL) {
+            description = "unable to determine C++ exception type";
+        }
         ksmc_fillMonitorContext(crashContext, kscm_cppexception_getAPI());
+
+        KSStackCursor cursor;
+        if (g_stackTraceCount != 0) {
+            kssc_initWithBacktrace(&cursor, g_stackTrace, g_stackTraceCount, 1);
+        } else {
+            cursor = g_stackCursor;
+        }
+
         crashContext->eventID = g_eventID;
         crashContext->registersAreValid = false;
-        crashContext->stackCursor = &g_stackCursor;
+        crashContext->stackCursor = &cursor;
         crashContext->CPPException.name = name;
         crashContext->exceptionName = name;
         crashContext->crashReason = description;

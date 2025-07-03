@@ -113,7 +113,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * **Default**: NULL
  */
-@property(nonatomic, copy, nullable) void (^crashNotifyCallback)(const struct KSCrashReportWriter *writer);
+@property(nonatomic, copy, nullable) void (^crashNotifyCallback)(const struct KSCrashReportWriter *writer, bool requiresAsyncSafety);
 
 /** Callback to invoke upon finishing writing a crash report.
  *
@@ -163,6 +163,14 @@ NS_ASSUME_NONNULL_BEGIN
  * **Default**: false
  */
 @property(nonatomic, assign) BOOL enableSigTermMonitoring;
+
+/** If true, enables writing all threads info in the report.
+ *
+ * If false, only the offending thread is going to be written to the report.
+ *
+ * **Default**: true
+ */
+@property(nonatomic, assign) BOOL threadTracingEnabled;
 
 @end
 

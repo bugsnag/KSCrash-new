@@ -31,6 +31,7 @@ public struct InstallConfig: Codable {
     public var installPath: String
     public var isCxaThrowEnabled: Bool?
     public var isSigTermMonitoringEnabled: Bool?
+    public var isMemoryIntrospectionEnabled: Bool?
 
     public init(installPath: String) {
         self.installPath = installPath
@@ -46,6 +47,9 @@ extension InstallConfig {
         }
         if let isSigTermMonitoringEnabled {
             config.enableSigTermMonitoring = isSigTermMonitoringEnabled
+        }
+        if let isMemoryIntrospectionEnabled {
+            config.enableMemoryIntrospection = isMemoryIntrospectionEnabled
         }
         try KSCrash.shared.install(with: config)
     }

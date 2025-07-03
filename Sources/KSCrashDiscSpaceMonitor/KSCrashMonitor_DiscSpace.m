@@ -45,6 +45,13 @@ static uint64_t getStorageSize(void)
     return storageSize.unsignedLongLongValue;
 }
 
+static uint64_t getFreeStorageSize(void)
+{
+    NSNumber *freeStorageSize = [[[NSFileManager defaultManager] attributesOfFileSystemForPath:NSHomeDirectory() error:nil]
+        objectForKey:NSFileSystemFreeSize];
+    return freeStorageSize.unsignedLongLongValue;
+}
+
 #pragma mark - API -
 
 static const char *monitorId(void) { return "DiscSpace"; }
@@ -62,6 +69,7 @@ static void addContextualInfoToEvent(KSCrash_MonitorContext *eventContext)
 {
     if (g_isEnabled) {
         eventContext->System.storageSize = getStorageSize();
+        eventContext->System.freeStorageSize = getFreeStorageSize();
     }
 }
 
