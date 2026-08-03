@@ -24,12 +24,12 @@
 // THE SOFTWARE.
 //
 
-import Foundation
 import Combine
-import SwiftUI
-import KSCrashRecording
+import Foundation
 import KSCrashInstallations
+import KSCrashRecording
 import Logging
+import SwiftUI
 
 public enum BasePath: String, CaseIterable {
     case `default`
@@ -78,7 +78,7 @@ public class InstallBridge: ObservableObject {
         config = .init()
         config.crashNotifyCallback = { (writer, requiresAsyncSafety) -> Void in
             Self.logger.info("User callback has requireAsyncSafety value: \(String(requiresAsyncSafety))")
-         }
+        }
 
         $basePath
             .removeDuplicates()

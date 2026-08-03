@@ -27,7 +27,6 @@
 #include "KSCrashReportC.h"
 
 #include "KSCPU.h"
-#include "KSCrashCachedData.h"
 #include "KSCrashMonitorHelper.h"
 #include "KSCrashMonitor_AppState.h"
 #include "KSCrashMonitor_CPPException.h"
@@ -56,6 +55,7 @@
 #include "KSStringConversion.h"
 #include "KSSystemCapabilities.h"
 #include "KSThread.h"
+#include "KSThreadCache.h"
 
 // #define KSLogger_LocalLevel TRACE
 #include <errno.h>
@@ -1069,7 +1069,7 @@ static void writeThread(const KSCrashReportWriter *const writer, const char *con
             writeRegisters(writer, KSCrashField_Registers, machineContext);
         }
         writer->addIntegerElement(writer, KSCrashField_Index, threadIndex);
-        const char *name = ksccd_getThreadName(thread);
+        const char *name = kstc_getThreadName(thread);
         if (name != NULL) {
             writer->addStringElement(writer, KSCrashField_Name, name);
         } else {
@@ -1082,7 +1082,7 @@ static void writeThread(const KSCrashReportWriter *const writer, const char *con
                 writer->addStringElement(writer, KSCrashField_Name, threadName);
             }
         }
-        name = ksccd_getQueueName(thread);
+        name = kstc_getQueueName(thread);
         if (name != NULL) {
             writer->addStringElement(writer, KSCrashField_DispatchQueue, name);
         }
@@ -1189,9 +1189,11 @@ static void writeBinaryImages(const KSCrashReportWriter *const writer, const cha
     writer->beginArray(writer, key);
     {
         for (KSBinaryImage *img = ksdl_get_images(); img != NULL; img = atomic_load(&img->next)) {
-            if (img->inCrashReport) {
-                writeBinaryImage(writer, NULL, img);
-            }
+            // TODO: Restore once we add a configuration option to omit the images that were not used during
+            // symbolication
+            //            if (img->inCrashReport) {
+            writeBinaryImage(writer, NULL, img);
+            //            }
         }
     }
     writer->endContainer(writer);
@@ -1471,7 +1473,7 @@ void kscrashreport_writeRecrashReport(const KSCrash_MonitorContext *const monito
         return;
     }
 
-    ksccd_freeze();
+    kstc_freeze();
 
     KSJSONEncodeContext jsonContext;
     jsonContext.userData = &bufferedWriter;
@@ -1509,7 +1511,7 @@ void kscrashreport_writeRecrashReport(const KSCrash_MonitorContext *const monito
 
     ksjson_endEncode(getJsonContext(writer));
     ksfu_closeBufferedWriter(&bufferedWriter);
-    ksccd_unfreeze();
+    kstc_unfreeze();
 }
 
 static void writeAppMemoryInfo(const KSCrashReportWriter *const writer, const char *const key,
@@ -1592,7 +1594,7 @@ void kscrashreport_writeStandardReport(const KSCrash_MonitorContext *const monit
         return;
     }
 
-    ksccd_freeze();
+    kstc_freeze();
 
     KSJSONEncodeContext jsonContext;
     jsonContext.userData = &bufferedWriter;
@@ -1649,7 +1651,7 @@ void kscrashreport_writeStandardReport(const KSCrash_MonitorContext *const monit
 
     ksjson_endEncode(getJsonContext(writer));
     ksfu_closeBufferedWriter(&bufferedWriter);
-    ksccd_unfreeze();
+    kstc_unfreeze();
 }
 
 void kscrashreport_setUserInfoJSON(const char *const userInfoJSON)
